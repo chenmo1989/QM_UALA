@@ -1,0 +1,164 @@
+{
+  "qubits": [{
+      "name": "q0",
+      "f_01": 5567000000.0,
+      "lo": 5467000000.0,
+      "rf_gain": 0,
+      "rf_switch_mode": "on",
+      "mixer_name": "octave_octave1_2",
+      "anharmonicity": 250000000.0,
+      "drag_coefficient": 0.0,
+      "ac_stark_detuning": 0.0,
+      "pi_length": 40,
+      "pi_amp": 0.124,
+      "T1": 1230,
+      "T2": 123,
+      "wiring": {
+        "controller": "con1",
+        "I": 3,
+        "Q": 4
+      }
+    },{
+      "name": "q1",
+      "f_01": 6386000000.0,
+      "lo": 6100000000.0,
+      "rf_gain": 0,
+      "rf_switch_mode": "on",
+      "mixer_name": "octave_octave1_3",
+      "anharmonicity": 250000000.0,
+      "drag_coefficient": 0.0,
+      "ac_stark_detuning": 0.0,
+      "pi_length": 40,
+      "pi_amp": 0.124,
+      "T1": 1230,
+      "T2": 123,
+      "wiring": {
+        "controller": "con1",
+        "I": 5,
+        "Q": 6
+      }
+    }],
+  "flux_lines": [{
+      "name": "flux0",
+      "flux_pulse_length": 16,
+      "flux_pulse_amp": 0.175,
+      "max_frequency_point": 0.0,
+      "iswap": {
+        "length": 16,
+        "level": 0.075
+      },
+      "wiring": {
+        "controller": "con1",
+        "port": 7,
+        "filter": {
+          "iir_taps": [],
+          "fir_taps": []
+        }
+      }
+    },{
+      "name": "flux1",
+      "flux_pulse_length": 16,
+      "flux_pulse_amp": 0.175,
+      "max_frequency_point": 0.0,
+      "iswap": {
+        "length": 16,
+        "level": 0.075
+      },
+      "wiring": {
+        "controller": "con1",
+        "port": 8,
+        "filter": {
+          "iir_taps": [],
+          "fir_taps": []
+        }
+      }
+    }],
+  "resonators": [{
+      "name": "rr0",
+      "f_readout": 6119620000.0,
+      "lo": 6062000000.0,
+      "rf_gain": 0,
+      "rf_switch_mode": "on",
+      "depletion_time": 10000,
+      "readout_pulse_length": 500,
+      "optimal_pulse_length": 2000,
+      "readout_pulse_amp": 0.5,
+      "rotation_angle": 0.0,
+      "ge_threshold": 0.0,
+      "wiring": {
+        "controller": "con1",
+        "I": 1,
+        "Q": 2
+      }
+    },{
+      "name": "rr1",
+      "f_readout": 7256000000.0,
+      "lo": 7100000000.0,
+      "rf_gain": 0,
+      "rf_switch_mode": "on",
+      "depletion_time": 10000,
+      "readout_pulse_length": 500,
+      "optimal_pulse_length": 2000,
+      "readout_pulse_amp": 0.05,
+      "rotation_angle": 0.0,
+      "ge_threshold": 0.0,
+      "wiring": {
+        "controller": "con1",
+        "I": 1,
+        "Q": 2
+      }
+    },{
+      "name": "rr2",
+      "f_readout": 6999000000.0,
+      "lo": 7100000000.0,
+      "rf_gain": 0,
+      "rf_switch_mode": "on",
+      "depletion_time": 10000,
+      "readout_pulse_length": 500,
+      "optimal_pulse_length": 2000,
+      "readout_pulse_amp": 0.05,
+      "rotation_angle": 0.0,
+      "ge_threshold": 0.0,
+      "wiring": {
+        "controller": "con1",
+        "I": 1,
+        "Q": 2
+      }
+    },{
+      "name": "rr3",
+      "f_readout": 6875000000.0,
+      "lo": 7100000000.0,
+      "rf_gain": 0,
+      "rf_switch_mode": "on",
+      "depletion_time": 10000,
+      "readout_pulse_length": 500,
+      "optimal_pulse_length": 2000,
+      "readout_pulse_amp": 0.05,
+      "rotation_angle": 0.0,
+      "ge_threshold": 0.0,
+      "wiring": {
+        "controller": "con1",
+        "I": 1,
+        "Q": 2
+      }
+    }],
+  "network": {
+    "qop_ip": "192.168.88.254",
+    "octave1_ip": "192.168.88.179",
+    "qop_port": 80,
+    "octave_port": 80,
+    "cluster_name": "DF5",
+    "save_dir": ""
+  },
+  "global_parameters": {
+    "time_of_flight": 304,
+    "saturation_amp": 0.1,
+    "saturation_len": 14000,
+    "con1_downconversion_offset_I": 0.010402,
+    "con1_downconversion_offset_Q": 0.013922,
+    "con1_downconversion_gain": 0,
+    "con2_downconversion_offset_I": 0.0,
+    "con2_downconversion_offset_Q": 0.0,
+    "con2_downconversion_gain": 0
+  }
+}
