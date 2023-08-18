@@ -123,9 +123,9 @@
       "anharmonicity": 250000000.0,
       "drag_coefficient": 0.0,
       "ac_stark_detuning": 0.0,
-      "pi_length": 40,
-      "pi_amp": 0.125,
-      "T1": 1230,
+      "pi_length": 80,
+      "pi_amp": 0.04995,
+      "T1": 12576,
       "T2": 123,
       "wiring": {
         "controller": "con1",
