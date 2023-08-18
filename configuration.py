@@ -497,6 +497,14 @@ def build_config(quam: QuAM):
                     "correction": [1.0, 0.0, 0.0, 1.0],
                 } 
                 for i in range(len(quam.resonators))
+            ],
+            "octave_octave1_2": [
+                {
+                    "intermediate_frequency": (quam.qubits[i].f_01 - quam.qubits[i].lo),
+                    "lo_frequency": quam.qubits[i].lo,
+                    "correction": [1.0, 0.0, 0.0, 1.0],
+                } 
+                for i in range(len(quam.qubits))
             ]
         },
     }

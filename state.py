@@ -16,7 +16,7 @@ state = {
             "drag_coefficient": 0.0,
             "ac_stark_detuning": 0.0,
             "pi_length": 40,
-            "pi_amp": 0.124,
+            "pi_amp": 0.125,
             "wiring": {
                 "controller": "con1",
                 "I": 3,
@@ -30,7 +30,7 @@ state = {
         {
             "name": "flux0",
             "flux_pulse_length": 16,
-            "flux_pulse_amp": 0.175,
+            "flux_pulse_amp": 0.125,
             "max_frequency_point": 0.0,
             "iswap": {
                 "length": 16,
@@ -53,7 +53,7 @@ state = {
             "depletion_time": 10_000,
             "readout_pulse_length": 500,
             "optimal_pulse_length": 2_000,
-            "readout_pulse_amp": 0.05,
+            "readout_pulse_amp": 0.125,
             "rotation_angle": 0.0,
             "ge_threshold": 0.0,
             "wiring": {

@@ -11,9 +11,9 @@ from qm.octave.octave_manager import ClockMode # for setting external clock
 
 machine = QuAM('quam_state.json')
 # Configure the Octave parameters for each element
-resonator = ElementsSettings("rr0", gain=0, rf_in_port=["octave1", 1], down_convert_LO_source="Internal")
+resonator = ElementsSettings("r6", gain=0, rf_in_port=["octave1", 1], down_convert_LO_source="Internal")
 # resonator_aux = ElementsSettings("resonator_aux", gain=0, rf_in_port=["octave1", 1], down_convert_LO_source="Internal")
-qubit = ElementsSettings("q0", gain=0)
+qubit = ElementsSettings("q6", gain=0)
 # Add the "octave" elements
 elements_settings = [resonator, qubit]
 
@@ -28,8 +28,8 @@ qmm = QuantumMachinesManager(host=machine.network.qop_ip, cluster_name=machine.n
 config = build_config(machine)
 # set to external clock #
 ###########################
-qm = qmm.open_qm(config)
-qm.octave.set_clock("octave1", clock_mode=ClockMode.External_10MHz)
+#qm = qmm.open_qm(config)
+#qm.octave.set_clock("octave1", clock_mode=ClockMode.External_10MHz)
 # qm.octave.set_clock("octave1", ClockType.External_10MHz)
 
 octave_settings(
