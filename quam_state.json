@@ -20,17 +20,17 @@
       }
     },{
       "name": "q1",
-      "f_01": 6289000000.0,
-      "lo": 6189000000.0,
+      "f_01": 6282215300.0,
+      "lo": 6110000000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
       "mixer_name": "octave_octave1_2",
       "anharmonicity": 250000000.0,
       "drag_coefficient": 0.0,
       "ac_stark_detuning": 0.0,
-      "pi_length": 40,
-      "pi_amp": 0.125,
-      "T1": 1230,
+      "pi_length": 80,
+      "pi_amp": 0.08375,
+      "T1": 5984,
       "T2": 123,
       "wiring": {
         "controller": "con1",
@@ -125,7 +125,7 @@
       "ac_stark_detuning": 0.0,
       "pi_length": 80,
       "pi_amp": 0.04995,
-      "T1": 12576,
+      "T1": 3454,
       "T2": 123,
       "wiring": {
         "controller": "con1",
@@ -272,7 +272,7 @@
       }
     },{
       "name": "r1",
-      "f_readout": 7130000000.0,
+      "f_readout": 7135100000.0,
       "lo": 7080000000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
@@ -357,7 +357,7 @@
       }
     },{
       "name": "r6",
-      "f_readout": 6021900000.0,
+      "f_readout": 6022000000.0,
       "lo": 5968000000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
