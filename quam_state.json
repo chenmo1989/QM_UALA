@@ -1,16 +1,16 @@
 {
   "qubits": [{
       "name": "q0",
-      "f_01": 5567000000.0,
-      "lo": 5467000000.0,
+      "f_01": 6341135416.0,
+      "lo": 6382000000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
       "mixer_name": "octave_octave1_2",
       "anharmonicity": 250000000.0,
       "drag_coefficient": 0.0,
       "ac_stark_detuning": 0.0,
-      "pi_length": 40,
-      "pi_amp": 0.125,
+      "pi_length": 180,
+      "pi_amp": 0.25,
       "T1": 1230,
       "T2": 123,
       "wiring": {
@@ -135,8 +135,8 @@
     }],
   "flux_lines": [{
       "name": "flux0",
-      "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.125,
+      "flux_pulse_length": 152,
+      "flux_pulse_amp": 0.25,
       "max_frequency_point": 0.0,
       "iswap": {
         "length": 16,
@@ -255,14 +255,14 @@
     }],
   "resonators": [{
       "name": "r0",
-      "f_readout": 6112000000.0,
-      "lo": 6062000000.0,
+      "f_readout": 7262120000.0,
+      "lo": 7206000000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
       "depletion_time": 10000,
       "readout_pulse_length": 500,
       "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.125,
+      "readout_pulse_amp": 0.27,
       "rotation_angle": 0.0,
       "ge_threshold": 0.0,
       "wiring": {
@@ -272,7 +272,7 @@
       }
     },{
       "name": "r1",
-      "f_readout": 7135100000.0,
+      "f_readout": 7129400000.0,
       "lo": 7080000000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
@@ -289,7 +289,7 @@
       }
     },{
       "name": "r2",
-      "f_readout": 6999000000.0,
+      "f_readout": 7003500000.0,
       "lo": 6949000000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
@@ -306,7 +306,7 @@
       }
     },{
       "name": "r3",
-      "f_readout": 6875000000.0,
+      "f_readout": 6879000000.0,
       "lo": 6825000000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
