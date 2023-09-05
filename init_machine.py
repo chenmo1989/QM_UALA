@@ -24,8 +24,10 @@ for i in range(6):
             "anharmonicity": 250e6,
             "drag_coefficient": 0.0,
             "ac_stark_detuning": 0.0,
+            "x180_length": 40
+            "x180_amp": 0.25
             "pi_length": 40,
-            "pi_amp": 0.125,
+            "pi_amp": 0.25,
             "wiring": {
                 "controller": qubits_connectivity[0][2],
                 "I": qubits_connectivity[0][0],

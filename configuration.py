@@ -26,7 +26,6 @@ from qualang_tools.plot import interrupt_on_close
 #     }
 # ]
 
-
 machine = QuAM('quam_state.json')
 #octave_1 = OctaveUnit("octave1", machine.network.octave1_ip, port=machine.network.octave_port, con="con1", clock="Internal")
 octave_1 = OctaveUnit("octave1", machine.network.octave1_ip, port=machine.network.octave_port, con="con1", clock="External_10MHz")
@@ -60,9 +59,9 @@ def build_config(quam: QuAM):
         # x180
         x180_wf, x180_der_wf = np.array(
             drag_gaussian_pulse_waveforms(
-                quam.qubits[i].pi_amp,
-                quam.qubits[i].pi_length,
-                quam.qubits[i].pi_length / 5,
+                quam.qubits[i].x180_amp,
+                quam.qubits[i].x180_length,
+                quam.qubits[i].x180_length / 5,
                 quam.qubits[i].drag_coefficient,
                 quam.qubits[i].anharmonicity,
                 quam.qubits[i].ac_stark_detuning,
@@ -73,9 +72,9 @@ def build_config(quam: QuAM):
         # x90
         x90_wf, x90_der_wf = np.array(
             drag_gaussian_pulse_waveforms(
-                quam.qubits[i].pi_amp / 2,
-                quam.qubits[i].pi_length,
-                quam.qubits[i].pi_length / 5,
+                quam.qubits[i].x180_amp / 2,
+                quam.qubits[i].x180_length,
+                quam.qubits[i].x180_length / 5,
                 quam.qubits[i].drag_coefficient,
                 quam.qubits[i].anharmonicity,
                 quam.qubits[i].ac_stark_detuning,
@@ -86,9 +85,9 @@ def build_config(quam: QuAM):
         # -x90
         minus_x90_wf, minus_x90_der_wf = np.array(
             drag_gaussian_pulse_waveforms(
-                -quam.qubits[i].pi_amp / 2,
-                quam.qubits[i].pi_length,
-                quam.qubits[i].pi_length / 5,
+                -quam.qubits[i].x180_amp / 2,
+                quam.qubits[i].x180_length,
+                quam.qubits[i].x180_length / 5,
                 quam.qubits[i].drag_coefficient,
                 quam.qubits[i].anharmonicity,
                 quam.qubits[i].ac_stark_detuning,
@@ -99,9 +98,9 @@ def build_config(quam: QuAM):
         # y180
         y180_wf, y180_der_wf = np.array(
             drag_gaussian_pulse_waveforms(
-                quam.qubits[i].pi_amp,
-                quam.qubits[i].pi_length,
-                quam.qubits[i].pi_length / 5,
+                quam.qubits[i].x180_amp,
+                quam.qubits[i].x180_length,
+                quam.qubits[i].x180_length / 5,
                 quam.qubits[i].drag_coefficient,
                 quam.qubits[i].anharmonicity,
                 quam.qubits[i].ac_stark_detuning,
@@ -112,9 +111,9 @@ def build_config(quam: QuAM):
         # y90
         y90_wf, y90_der_wf = np.array(
             drag_gaussian_pulse_waveforms(
-                quam.qubits[i].pi_amp / 2,
-                quam.qubits[i].pi_length,
-                quam.qubits[i].pi_length / 5,
+                quam.qubits[i].x180_amp / 2,
+                quam.qubits[i].x180_length,
+                quam.qubits[i].x180_length / 5,
                 quam.qubits[i].drag_coefficient,
                 quam.qubits[i].anharmonicity,
                 quam.qubits[i].ac_stark_detuning,
@@ -125,9 +124,9 @@ def build_config(quam: QuAM):
         # -y90
         minus_y90_wf, minus_y90_der_wf = np.array(
             drag_gaussian_pulse_waveforms(
-                -quam.qubits[i].pi_amp / 2,
-                quam.qubits[i].pi_length,
-                quam.qubits[i].pi_length / 5,
+                -quam.qubits[i].x180_amp / 2,
+                quam.qubits[i].x180_length,
+                quam.qubits[i].x180_length / 5,
                 quam.qubits[i].drag_coefficient,
                 quam.qubits[i].anharmonicity,
                 quam.qubits[i].ac_stark_detuning,
@@ -232,6 +231,8 @@ def build_config(quam: QuAM):
                     "intermediate_frequency": (quam.qubits[i].f_01 - quam.qubits[i].lo),
                     "operations": {
                         "cw": "const_pulse",
+                        "pi": f"pi_pulse{i}",
+                        "pi2": f"pi_over_two_pulse{i}",
                         "x180": f"x180_pulse{i}",
                         "x90": f"x90_pulse{i}",
                         "-x90": f"-x90_pulse{i}",
@@ -297,9 +298,31 @@ def build_config(quam: QuAM):
                 for i in range(len(quam.resonators))
             },
             **{
-                f"x90_pulse{i}": {
+                f"pi_pulse{i}": {
                     "operation": "control",
                     "length": quam.qubits[i].pi_length,
+                    "waveforms": {
+                        "I": f"pi_wf{i}",
+                        "Q": "zero_wf",
+                    },
+                }
+                for i in range(len(quam.qubits))
+            },
+            **{
+                f"pi_over_2_pulse{i}": {
+                    "operation": "control",
+                    "length": quam.qubits[i].pi_length,
+                    "waveforms": {
+                        "I": f"pi_over_two_wf{i}",
+                        "Q": "zero_wf",
+                    },
+                }
+                for i in range(len(quam.qubits))
+            },
+            **{
+                f"x90_pulse{i}": {
+                    "operation": "control",
+                    "length": quam.qubits[i].x180_length,
                     "waveforms": {
                         "I": f"x90_I_wf{i}",
                         "Q": f"x90_Q_wf{i}",
@@ -310,7 +333,7 @@ def build_config(quam: QuAM):
             **{
                 f"x180_pulse{i}": {
                     "operation": "control",
-                    "length": quam.qubits[i].pi_length,
+                    "length": quam.qubits[i].x180_length,
                     "waveforms": {
                         "I": f"x180_I_wf{i}",
                         "Q": f"x180_Q_wf{i}",
@@ -321,7 +344,7 @@ def build_config(quam: QuAM):
             **{
                 f"-x90_pulse{i}": {
                     "operation": "control",
-                    "length": quam.qubits[i].pi_length,
+                    "length": quam.qubits[i].x180_length,
                     "waveforms": {
                         "I": f"minus_x90_I_wf{i}",
                         "Q": f"minus_x90_Q_wf{i}",
@@ -332,7 +355,7 @@ def build_config(quam: QuAM):
             **{
                 f"y90_pulse{i}": {
                     "operation": "control",
-                    "length": quam.qubits[i].pi_length,
+                    "length": quam.qubits[i].x180_length,
                     "waveforms": {
                         "I": f"y90_I_wf{i}",
                         "Q": f"y90_Q_wf{i}",
@@ -343,7 +366,7 @@ def build_config(quam: QuAM):
             **{
                 f"y180_pulse{i}": {
                     "operation": "control",
-                    "length": quam.qubits[i].pi_length,
+                    "length": quam.qubits[i].x180_length,
                     "waveforms": {
                         "I": f"y180_I_wf{i}",
                         "Q": f"y180_Q_wf{i}",
@@ -354,7 +377,7 @@ def build_config(quam: QuAM):
             **{
                 f"-y90_pulse{i}": {
                     "operation": "control",
-                    "length": quam.qubits[i].pi_length,
+                    "length": quam.qubits[i].x180_length,
                     "waveforms": {
                         "I": f"minus_y90_I_wf{i}",
                         "Q": f"minus_y90_Q_wf{i}",
@@ -373,6 +396,14 @@ def build_config(quam: QuAM):
             **{
                 f"readout{i}_wf": {"type": "constant", "sample": quam.resonators[i].readout_pulse_amp}
                 for i in range(len(quam.resonators))
+            },
+            **{
+                f"pi_wf{i}": {"type": "constant", "sample": quam.qubits[i].pi_amp}
+                for i in range(len(quam.qubits))
+            },
+            **{
+                f"pi_over_two_wf{i}": {"type": "constant", "sample": quam.qubits[i].pi_amp/2}
+                for i in range(len(quam.qubits))
             },
             **{f"x90_I_wf{i}": {"type": "arbitrary", "samples": x90_I_wf[i].tolist()} for i in range(len(quam.qubits))},
             **{f"x90_Q_wf{i}": {"type": "arbitrary", "samples": x90_Q_wf[i].tolist()} for i in range(len(quam.qubits))},
