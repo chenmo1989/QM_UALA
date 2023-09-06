@@ -15,8 +15,10 @@ state = {
             "anharmonicity": 250e6,
             "drag_coefficient": 0.0,
             "ac_stark_detuning": 0.0,
+            "x180_length": 40
+            "x180_amp": 0.25
             "pi_length": 40,
-            "pi_amp": 0.125,
+            "pi_amp": 0.25,
             "wiring": {
                 "controller": "con1",
                 "I": 3,
