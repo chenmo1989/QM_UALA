@@ -146,7 +146,7 @@ def build_config(quam: QuAM):
                     4: {"offset": 0.0},
                     5: {"offset": 0.0},
                     6: {"offset": 0.0},
-                    7: {"offset": 0.0, "delay", 19.0},
+                    7: {"offset": 0.0, "delay": 19},
                     8: {"offset": 0.0}, 
                     9: {"offset": 0.0}, 
                     10: {"offset": 0.0}, 
@@ -309,7 +309,7 @@ def build_config(quam: QuAM):
                 for i in range(len(quam.qubits))
             },
             **{
-                f"pi_over_2_pulse{i}": {
+                f"pi_over_two_pulse{i}": {
                     "operation": "control",
                     "length": quam.qubits[i].pi_length,
                     "waveforms": {
