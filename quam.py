@@ -57,6 +57,8 @@ class Qubit(QuamComponent):
     anharmonicity: float
     drag_coefficient: float
     ac_stark_detuning: float
+    x180_length: int
+    x180_amp: float
     pi_length: int
     pi_amp: float
     T1: int
@@ -93,6 +95,7 @@ class Flux_line(QuamComponent):
     flux_pulse_length: int
     flux_pulse_amp: float
     max_frequency_point: float
+    Z_delay: int
     iswap: Iswap
     wiring: Wiring2
     

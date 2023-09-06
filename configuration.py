@@ -146,7 +146,7 @@ def build_config(quam: QuAM):
                     4: {"offset": 0.0},
                     5: {"offset": 0.0},
                     6: {"offset": 0.0},
-                    7: {"offset": 0.0},
+                    7: {"offset": 0.0, "delay", 19.0},
                     8: {"offset": 0.0}, 
                     9: {"offset": 0.0}, 
                     10: {"offset": 0.0}, 

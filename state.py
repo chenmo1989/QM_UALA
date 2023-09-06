@@ -7,16 +7,16 @@ state = {
     "qubits": [
         {
             "name": "q0",
-            "f_01": 6.482e9, 
-            "lo": 6.382e9,
+            "f_01": 6341135416.0, 
+            "lo": 6382000000.0,
             "rf_gain": 0,
             "rf_switch_mode": "on",
             "mixer_name": "octave_octave1_2",
             "anharmonicity": 250e6,
             "drag_coefficient": 0.0,
             "ac_stark_detuning": 0.0,
-            "x180_length": 40
-            "x180_amp": 0.25
+            "x180_length": 40,
+            "x180_amp": 0.25,
             "pi_length": 40,
             "pi_amp": 0.25,
             "wiring": {
@@ -34,6 +34,7 @@ state = {
             "flux_pulse_length": 16,
             "flux_pulse_amp": 0.125,
             "max_frequency_point": 0.0,
+            "Z_delay": 19,
             "iswap": {
                 "length": 16,
                 "level": 0.075,

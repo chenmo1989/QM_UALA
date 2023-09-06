@@ -24,8 +24,8 @@ for i in range(6):
             "anharmonicity": 250e6,
             "drag_coefficient": 0.0,
             "ac_stark_detuning": 0.0,
-            "x180_length": 40
-            "x180_amp": 0.25
+            "x180_length": 40,
+            "x180_amp": 0.25,
             "pi_length": 40,
             "pi_amp": 0.25,
             "wiring": {
@@ -44,6 +44,7 @@ for i in range(6):
             "flux_pulse_length": 16,
             "flux_pulse_amp": 0.125,
             "max_frequency_point": 0.0,
+            "Z_delay": 19,
             "iswap": {
                 "length": 16,
                 "level": 0.075,
