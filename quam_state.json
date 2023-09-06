@@ -276,14 +276,14 @@
     }],
   "resonators": [{
       "name": "r0",
-      "f_readout": 7256000000.0,
+      "f_readout": 7260060000.0,
       "lo": 7206000000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
       "depletion_time": 10000,
       "readout_pulse_length": 500,
       "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.125,
+      "readout_pulse_amp": 0.3,
       "rotation_angle": 0.0,
       "ge_threshold": 0.0,
       "wiring": {
@@ -300,7 +300,7 @@
       "depletion_time": 10000,
       "readout_pulse_length": 500,
       "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.125,
+      "readout_pulse_amp": 0.3,
       "rotation_angle": 0.0,
       "ge_threshold": 0.0,
       "wiring": {
@@ -317,7 +317,7 @@
       "depletion_time": 10000,
       "readout_pulse_length": 500,
       "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.125,
+      "readout_pulse_amp": 0.3,
       "rotation_angle": 0.0,
       "ge_threshold": 0.0,
       "wiring": {
@@ -334,7 +334,7 @@
       "depletion_time": 10000,
       "readout_pulse_length": 500,
       "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.125,
+      "readout_pulse_amp": 0.3,
       "rotation_angle": 0.0,
       "ge_threshold": 0.0,
       "wiring": {
@@ -351,7 +351,7 @@
       "depletion_time": 10000,
       "readout_pulse_length": 500,
       "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.125,
+      "readout_pulse_amp": 0.3,
       "rotation_angle": 0.0,
       "ge_threshold": 0.0,
       "wiring": {
@@ -368,7 +368,7 @@
       "depletion_time": 10000,
       "readout_pulse_length": 500,
       "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.125,
+      "readout_pulse_amp": 0.3,
       "rotation_angle": 0.0,
       "ge_threshold": 0.0,
       "wiring": {
@@ -385,7 +385,7 @@
       "depletion_time": 10000,
       "readout_pulse_length": 500,
       "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.125,
+      "readout_pulse_amp": 0.3,
       "rotation_angle": 0.0,
       "ge_threshold": 0.0,
       "wiring": {
