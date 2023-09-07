@@ -150,7 +150,7 @@
   "flux_lines": [{
       "name": "flux0",
       "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.125,
+      "flux_pulse_amp": 0.25,
       "max_frequency_point": 0.0,
       "Z_delay": 19,
       "iswap": {
@@ -168,7 +168,7 @@
     },{
       "name": "flux1",
       "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.125,
+      "flux_pulse_amp": 0.25,
       "max_frequency_point": 0.0,
       "Z_delay": 19,
       "iswap": {
@@ -186,7 +186,7 @@
     },{
       "name": "flux2",
       "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.125,
+      "flux_pulse_amp": 0.25,
       "max_frequency_point": 0.0,
       "Z_delay": 19,
       "iswap": {
@@ -204,7 +204,7 @@
     },{
       "name": "flux3",
       "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.125,
+      "flux_pulse_amp": 0.25,
       "max_frequency_point": 0.0,
       "Z_delay": 19,
       "iswap": {
@@ -222,7 +222,7 @@
     },{
       "name": "flux4",
       "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.125,
+      "flux_pulse_amp": 0.25,
       "max_frequency_point": 0.0,
       "Z_delay": 19,
       "iswap": {
@@ -240,7 +240,7 @@
     },{
       "name": "flux5",
       "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.125,
+      "flux_pulse_amp": 0.25,
       "max_frequency_point": 0.0,
       "Z_delay": 19,
       "iswap": {
@@ -258,7 +258,7 @@
     },{
       "name": "flux6",
       "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.125,
+      "flux_pulse_amp": 0.25,
       "max_frequency_point": 0.0,
       "Z_delay": 19,
       "iswap": {
