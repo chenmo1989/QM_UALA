@@ -2,7 +2,7 @@
   "qubits": [{
       "name": "q0",
       "f_01": 6341860977.0,
-      "lo": 6382000000.0,
+      "lo": 6352000000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
       "mixer_name": "octave_octave1_2",
