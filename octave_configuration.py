@@ -23,7 +23,8 @@ machine._save("quam_state.json", flat_data=False)
 # Octave settings #
 ###################
 # Configure the Octave according to the elements settings and calibrate
-qmm = QuantumMachinesManager(host=machine.network.qop_ip, cluster_name=machine.network.cluster_name, octave=octave_config, log_level="ERROR")
+qmm = QuantumMachinesManager(host=machine.network.qop_ip, port = '9510', octave=octave_config, log_level="ERROR")
+
 
 config = build_config(machine)
 # set to external clock #
