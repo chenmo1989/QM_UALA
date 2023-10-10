@@ -1,8 +1,8 @@
 {
   "qubits": [{
       "name": "q0",
-      "f_01": 6460000000.0,
-      "lo": 6200000000.0,
+      "f_01": 6567349000.0,
+      "lo": 6617349000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
       "mixer_name": "octave_octave1_2",
@@ -11,9 +11,9 @@
       "ac_stark_detuning": 0.0,
       "x180_length": 180,
       "x180_amp": 0.25,
-      "pi_length": 100,
-      "pi_amp": 0.020557672687122486,
-      "T1": 2035,
+      "pi_length": 116,
+      "pi_amp": 0.020968826140864937,
+      "T1": 3828,
       "T2": 123,
       "wiring": {
         "controller": "con1",
@@ -276,7 +276,7 @@
     }],
   "resonators": [{
       "name": "r0",
-      "f_readout": 7262490000.0,
+      "f_readout": 7262890000.0,
       "lo": 7312490000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
