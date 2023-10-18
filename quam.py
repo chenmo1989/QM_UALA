@@ -63,6 +63,7 @@ class Qubit(QuamComponent):
     pi_amp: float
     T1: int
     T2: int
+    tuning_curve: List[Union[str, int, float, bool, list]]
     wiring: Wiring
     
 
@@ -96,6 +97,7 @@ class Flux_line(QuamComponent):
     flux_pulse_amp: float
     max_frequency_point: float
     Z_delay: int
+    dc_voltage: int
     iswap: Iswap
     wiring: Wiring2
     
@@ -122,6 +124,9 @@ class Resonator(QuamComponent):
     readout_pulse_amp: float
     rotation_angle: float
     ge_threshold: float
+    RO_attenuation: List[Union[str, int, float, bool, list]]
+    TWPA: List[Union[str, int, float, bool, list]]
+    tuning_curve: List[Union[str, int, float, bool, list]]
     wiring: Wiring3
     
 
@@ -137,6 +142,7 @@ class Global_parameters(QuamComponent):
     con2_downconversion_offset_I: float
     con2_downconversion_offset_Q: float
     con2_downconversion_gain: int
+    RO_delay: int
     
 
 

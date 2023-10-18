@@ -140,8 +140,8 @@ def build_config(quam: QuAM):
         "controllers": {
             "con1": {
                 "analog_outputs": {
-                    1: {"offset": 0.0},
-                    2: {"offset": 0.0},
+                    1: {"offset": 0.0, "delay": quam.global_parameters.RO_delay},
+                    2: {"offset": 0.0, "delay": quam.global_parameters.RO_delay},
                     3: {"offset": 0.0},
                     4: {"offset": 0.0},
                     5: {"offset": 0.0},

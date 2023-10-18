@@ -7,8 +7,8 @@ state = {
     "qubits": [
         {
             "name": "q0",
-            "f_01": 6341135416.0, 
-            "lo": 6382000000.0,
+            "f_01": 6567349000.0,
+            "lo": 6617349000.0,
             "rf_gain": 0,
             "rf_switch_mode": "on",
             "mixer_name": "octave_octave1_2",
@@ -17,8 +17,8 @@ state = {
             "ac_stark_detuning": 0.0,
             "x180_length": 180,
             "x180_amp": 0.25,
-            "pi_length": 40,
-            "pi_amp": 0.25,
+            "pi_length": 116,
+            "pi_amp": 0.020968826140864937,
             "wiring": {
                 "controller": "con1",
                 "I": 3,
@@ -26,13 +26,14 @@ state = {
             },
             "T1": 1230,
             "T2": 123,
+            "tuning_curve": [0,0,0],
         },
     ],
     "flux_lines": [
         {
             "name": "flux0",
             "flux_pulse_length": 16,
-            "flux_pulse_amp": 0.125,
+            "flux_pulse_amp": 0.25,
             "max_frequency_point": 0.0,
             "Z_delay": 19,
             "iswap": {
@@ -44,6 +45,7 @@ state = {
                 "port": 7,
                 "filter": {"iir_taps": [], "fir_taps": []},
             },
+            "dc_voltage": 0,
         },
     ],
     "resonators": [
@@ -64,6 +66,9 @@ state = {
                 "I": 1,
                 "Q": 2,
             },
+            "RO_attenuation": [32, 10],
+            "TWPA": [6324E6,-10],
+            "tuning_curve": [0, 0, 0, 0, 0, 0],
         },
     ],
     "global_parameters": {
@@ -76,6 +81,7 @@ state = {
         "con2_downconversion_offset_I": 0.0,
         "con2_downconversion_offset_Q": 0.0,
         "con2_downconversion_gain": 0,
+        "RO_delay": 0,
     },
 }
 

@@ -141,7 +141,7 @@ def declare_vars(I=None, Q=None, n=None, I_st=None, Q_st=None, n_st=None):
     if Q is None:
         Q = declare(fixed)
     if n is None:   
-        Q = declare(fixed)
+        n = declare(int)
     if I_st is None:
         I_st = declare_stream()
     if Q_st is None:
@@ -160,8 +160,8 @@ def readout_avg_macro(res_name: str, I=None, Q=None, I_st=None, Q_st=None):
         "readout",
         res_name,
         None,
-        dual_demod.full("rotated_cos", "out1", "rotated_sin", "out2", I),
-        dual_demod.full("rotated_minus_sin", "out1", "rotated_cos", "out2", Q),
+        dual_demod.full("cos", "out1", "sin", "out2", I),
+        dual_demod.full("minus_sin", "out1", "cos", "out2", Q),
     )
 
 # Frequency tracking class
