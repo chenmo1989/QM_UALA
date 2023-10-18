@@ -135,6 +135,35 @@ def readout_macro(res_name: str, threshold=None, state=None, I=None, Q=None):
     return I, Q
 
 
+def declare_vars(I=None, Q=None, n=None, I_st=None, Q_st=None, n_st=None):
+    if I is None:
+        I = declare(fixed)
+    if Q is None:
+        Q = declare(fixed)
+    if n is None:   
+        Q = declare(fixed)
+    if I_st is None:
+        I_st = declare_stream()
+    if Q_st is None:
+        Q_st = declare_stream()
+    if n_st is None:
+        n_st = declare_stream()
+    return [I,Q,n,I_st,Q_st,n_st]
+
+
+def readout_avg_macro(res_name: str, I=None, Q=None, I_st=None, Q_st=None):
+    """
+    A macro for performing the readout over averages
+    :return: Three QUA variables populated with the results of the readout: (`I`, `Q`, `I_st', `Q_st')
+    """
+    measure(
+        "readout",
+        res_name,
+        None,
+        dual_demod.full("rotated_cos", "out1", "rotated_sin", "out2", I),
+        dual_demod.full("rotated_minus_sin", "out1", "rotated_cos", "out2", Q),
+    )
+
 # Frequency tracking class
 class qubit_frequency_tracking:
     def __init__(self, qubit, rr, f_res, ge_threshold, frame_rotation_flag=False):
