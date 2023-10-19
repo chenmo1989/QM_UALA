@@ -157,12 +157,13 @@ def readout_avg_macro(res_name: str, I=None, Q=None, I_st=None, Q_st=None):
     :return: Three QUA variables populated with the results of the readout: (`I`, `Q`, `I_st', `Q_st')
     """
     measure(
-        "readout",
+        "readout" * amp(1),
         res_name,
         None,
         dual_demod.full("cos", "out1", "sin", "out2", I),
         dual_demod.full("minus_sin", "out1", "cos", "out2", Q),
     )
+    return I, Q
 
 # Frequency tracking class
 class qubit_frequency_tracking:

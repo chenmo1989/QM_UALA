@@ -3,6 +3,11 @@ This file contains useful python functions meant to simplify the Jupyter noteboo
 AnalysisHandle
 
 """
+import matplotlib.pyplot as plt
+from scipy.signal import savgol_filter
+from configuration import *
+import json
+import numpy as np
 
 class AH_RR: # subclass in AnalysisHandle, for Readout Resonator (RR) related data analysis
 	def __init__(self):
@@ -62,7 +67,7 @@ class AH_RR: # subclass in AnalysisHandle, for Readout Resonator (RR) related da
 		plt.tight_layout(pad=2)
 		plt.show()
 
-	def RR_freq(self, res_freq_sweep, sig_amp):
+	def rr_freq(self, res_freq_sweep, sig_amp):
 		%matplotlib qt
 		idx = np.argmin(sig_amp) # find minimum
 		print(f"IF offset to add to IF: {res_freq_sweep[idx] / u.MHz:.6f} MHz")
