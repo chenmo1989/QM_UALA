@@ -70,8 +70,8 @@ class Qubit(QuamComponent):
 
 @quam_data
 class Iswap(QuamComponent):
-    length: int
-    level: float
+    length: List[Union[str, int, float, bool, list]]
+    level: List[Union[str, int, float, bool, list]]
     
 
 

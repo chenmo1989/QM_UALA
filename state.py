@@ -17,8 +17,8 @@ state = {
             "ac_stark_detuning": 0.0,
             "x180_length": 180,
             "x180_amp": 0.25,
-            "pi_length": 116,
-            "pi_amp": 0.020968826140864937,
+            "pi_length": 16,
+            "pi_amp": 0.25,
             "wiring": {
                 "controller": "con1",
                 "I": 3,
@@ -37,8 +37,8 @@ state = {
             "max_frequency_point": 0.0,
             "Z_delay": 19,
             "iswap": {
-                "length": 16,
-                "level": 0.075,
+                "length": [],
+                "level": [],
             },
             "wiring": {
                 "controller": "con1",

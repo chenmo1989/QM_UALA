@@ -1,100 +1,87 @@
 """
 This file contains useful python functions meant to simplify the Jupyter notebook.
 AnalysisHandle
-
+written by Mo Chen in Oct. 2023
 """
-import matplotlib.pyplot as plt
-from scipy.signal import savgol_filter
+from qm.qua import *
+from qm.QuantumMachinesManager import QuantumMachinesManager
+from qm import SimulationConfig, LoopbackInterface
+from qm.octave import *
+from qm.octave.octave_manager import ClockMode
 from configuration import *
+from scipy import signal
+from qm import SimulationConfig
+from qualang_tools.bakery import baking
+from qualang_tools.units import unit
+from qm import generate_qua_script
+from qm.octave import QmOctaveConfig
+from set_octave import ElementsSettings, octave_settings
+from quam import QuAM
+from scipy.io import savemat
+from scipy.io import loadmat
+from scipy.optimize import curve_fit
+from scipy.signal import savgol_filter
+from qutip import *
+from typing import Union
+import datetime
+import os
+import time
+import warnings
 import json
+import matplotlib.pyplot as plt
 import numpy as np
 
-class AH_RR: # subclass in AnalysisHandle, for Readout Resonator (RR) related data analysis
-	def __init__(self):
-		pass
-
-	def time_of_flight(self, adc1,adc2,adc1_single_run,adc2_single_run):
-		adc1_mean = np.mean(adc1)
-		adc2_mean = np.mean(adc2)
-		adc1_unbiased = adc1 - np.mean(adc1)
-		adc2_unbiased = adc2 - np.mean(adc2)
-		signal = savgol_filter(np.abs(adc1_unbiased + 1j * adc2_unbiased), 11, 3)
-		# detect arrival of readout signal
-		th = (np.mean(signal[:100]) + np.mean(signal[:-100])) / 2
-		delay = np.where(signal > th)[0][0]
-		delay = np.round(delay / 4) * 4
-		dc_offset_i = -adc1_mean
-		dc_offset_q = -adc2_mean
-
-		# Update the config
-		print(f"DC offset to add to I: {dc_offset_i:.6f} V")
-		print(f"DC offset to add to Q: {dc_offset_q:.6f} V")
-		print(f"TOF to add: {delay} ns")
-
-		# Plot data
-		fig = plt.figure(figsize=[14, 6])
-		plt.subplot(121)
-		plt.title("Single run")
-		plt.plot(adc1_single_run, "b", label="I")
-		plt.plot(adc2_single_run, "r", label="Q")
-		plt.axhline(y=0.5)
-		plt.axhline(y=-0.5)
-		xl = plt.xlim()
-		yl = plt.ylim()
-		plt.plot(xl, adc1_mean * np.ones(2), "k--")
-		plt.plot(xl, adc2_mean * np.ones(2), "k--")
-		plt.plot(delay * np.ones(2), yl, "k--")
-		plt.xlabel("Time [ns]")
-		plt.ylabel("Signal amplitude [V]")
-		plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1),
-		          fancybox=True, shadow=True, ncol=5)
-		
-		plt.subplot(122)
-		plt.title("Averaged run")
-		plt.plot(adc1, "b", label="I")
-		plt.plot(adc2, "r", label="Q")
-		plt.xlabel("Time [ns]")
-		plt.ylabel("Signal amplitude [V]")
-		xl = plt.xlim()
-		yl = plt.ylim()
-		plt.plot(xl, adc1_mean * np.ones(2), "k--")
-		plt.plot(xl, adc2_mean * np.ones(2), "k--")
-		plt.plot(delay * np.ones(2), yl, "k--")
-		plt.xlabel("Time [ns]")
-		plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1),
-		          fancybox=True, shadow=True, ncol=5)
-		plt.grid("all")
-		plt.tight_layout(pad=2)
-		plt.show()
-
-	def rr_freq(self, res_freq_sweep, sig_amp):
-		%matplotlib qt
-		idx = np.argmin(sig_amp) # find minimum
-		print(f"IF offset to add to IF: {res_freq_sweep[idx] / u.MHz:.6f} MHz")
-
-		plt.close('all')
-		%matplotlib inline
-		# 1D spectroscopy plot
-		fig = plt.figure(figsize=[8, 4])
-		plt.title("Resonator spectroscopy")
-		plt.plot((res_freq_sweep) / u.MHz, sig_amp, ".")
-		plt.xlabel("Frequency [MHz]")
-		plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
-		plt.axvline(x = (res_freq_sweep[idx]) / u.MHz)
-
-class AH_exp1D:
-	def __init__(self):
-		self.RR = AH_RR()
-		self.Rabi = AH_Rabi()
-		self.Echo = AH_Echo()
-		self.CPMG = AH_CPMG()
-
-class AH_exp2D:
-	def __init__(self):
-		pass
+from AnalysisClass_1D import AH_exp1D
+from AnalysisClass_2D import AH_exp2D
 
 class AnalysisHandle:
-	def __init__(self)
+	def __init__(self):
 		self.exp1D = AH_exp1D()
-		self.exp2D = AH_exp2D() 
-		self.expsave = AH_expsave()
+		self.exp2D = AH_exp2D()
+		# for updated values
+		self.ham_param = []
+		self.poly_param = []
+
+	def get_machine(self):
+		machine = QuAM("quam_state.json")
+		config = build_config(machine)
+		return machine
+
+	def set_machine(self,machine):
+		machine._save("quam_state.json",flat_data = False)
+		return machine
+
+	def update_machine_qubit_frequency(self,machine,qubit_index,new_freq):
+		machine.qubits[qubit_index].f_01 = new_freq
+		return machine
+
+	def update_machine_qubit_frequency_rel(self,machine,qubit_index,new_freq):
+		machine.qubits[qubit_index].f_01 += new_freq
+		return machine
+
+	def update_machine_res_frequency(self,machine,qubit_index,new_freq):
+		machine.resonators[qubit_index].f_readout = new_freq
+		return machine
+
+	def update_machine_res_frequency_rel(self,machine,qubit_index,new_freq):
+		machine.resonators[qubit_index].f_readout += new_freq
+		return machine
+
+	def update_analysis_tuning_curve(self,qubit_index,res_index,flux_index,ham_param = None, poly_param = None):
+		if ham_param is None:
+			self.ham_param = self.get_machine().resonators[res_index].tuning_curve
+		if poly_param is None:
+			self.poly_param = self.get_machine().qubits[qubit_index].tuning_curve
+		return
+
+	def get_sweept_spot(self,poly_param = None):
+		if poly_param is None:
+			poly_param = self.poly_param
+		if np.size(poly_param) > 3:
+			print("polynomial order > 2")
+			return None
+		else:
+			return -poly_param[1]/2/poly_param[0]
+
+
+

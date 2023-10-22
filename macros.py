@@ -10,11 +10,23 @@ import matplotlib.pyplot as plt
 import numpy as np
 from qualang_tools.loops import from_array
 from configuration import u
+import time
 
 ##############
 # QUA macros #
 ##############
 
+def wait_until_job_is_paused(current_job):
+    """
+    Waits until the OPX FPGA reaches the pause statement.
+    Used when the OPX sequence needs to be synchronized with an external parameter sweep.
+
+    :param current_job: the job object.
+    """
+    while not current_job.is_paused():
+        time.sleep(0.01)
+        pass
+    return True
 
 def reset_qubit(method, **kwargs):
     """

@@ -11,11 +11,11 @@
       "ac_stark_detuning": 0.0,
       "x180_length": 180,
       "x180_amp": 0.25,
-      "pi_length": 116,
-      "pi_amp": 0.020968826140864937,
+      "pi_length": 24,
+      "pi_amp": 0.25,
       "T1": 1230,
       "T2": 123,
-      "tuning_curve": [0,0,0],
+      "tuning_curve": [-400.92166450438407,54.67834944461571,6428.713771987763],
       "wiring": {
         "controller": "con1",
         "I": 3,
@@ -33,7 +33,7 @@
       "ac_stark_detuning": 0.0,
       "x180_length": 40,
       "x180_amp": 0.25,
-      "pi_length": 40,
+      "pi_length": 24,
       "pi_amp": 0.25,
       "T1": 1230,
       "T2": 123,
@@ -55,7 +55,7 @@
       "ac_stark_detuning": 0.0,
       "x180_length": 40,
       "x180_amp": 0.25,
-      "pi_length": 40,
+      "pi_length": 24,
       "pi_amp": 0.25,
       "T1": 1230,
       "T2": 123,
@@ -77,7 +77,7 @@
       "ac_stark_detuning": 0.0,
       "x180_length": 40,
       "x180_amp": 0.25,
-      "pi_length": 40,
+      "pi_length": 24,
       "pi_amp": 0.25,
       "T1": 1230,
       "T2": 123,
@@ -99,7 +99,7 @@
       "ac_stark_detuning": 0.0,
       "x180_length": 40,
       "x180_amp": 0.25,
-      "pi_length": 40,
+      "pi_length": 24,
       "pi_amp": 0.25,
       "T1": 1230,
       "T2": 123,
@@ -121,7 +121,7 @@
       "ac_stark_detuning": 0.0,
       "x180_length": 40,
       "x180_amp": 0.25,
-      "pi_length": 40,
+      "pi_length": 24,
       "pi_amp": 0.25,
       "T1": 1230,
       "T2": 123,
@@ -143,7 +143,7 @@
       "ac_stark_detuning": 0.0,
       "x180_length": 40,
       "x180_amp": 0.25,
-      "pi_length": 40,
+      "pi_length": 24,
       "pi_amp": 0.25,
       "T1": 1230,
       "T2": 123,
@@ -158,12 +158,12 @@
       "name": "flux0",
       "flux_pulse_length": 16,
       "flux_pulse_amp": 0.25,
-      "max_frequency_point": 0.0,
+      "max_frequency_point": 0.06819081417339797,
       "Z_delay": 19,
       "dc_voltage": 0,
       "iswap": {
-        "length": 16,
-        "level": 0.075
+        "length": [],
+        "level": []
       },
       "wiring": {
         "controller": "con1",
@@ -181,8 +181,8 @@
       "Z_delay": 19,
       "dc_voltage": 0,
       "iswap": {
-        "length": 16,
-        "level": 0.075
+        "length": [],
+        "level": []
       },
       "wiring": {
         "controller": "con1",
@@ -200,8 +200,8 @@
       "Z_delay": 19,
       "dc_voltage": 0,
       "iswap": {
-        "length": 16,
-        "level": 0.075
+        "length": [],
+        "level": []
       },
       "wiring": {
         "controller": "con1",
@@ -219,8 +219,8 @@
       "Z_delay": 19,
       "dc_voltage": 0,
       "iswap": {
-        "length": 16,
-        "level": 0.075
+        "length": [],
+        "level": []
       },
       "wiring": {
         "controller": "con1",
@@ -238,8 +238,8 @@
       "Z_delay": 19,
       "dc_voltage": 0,
       "iswap": {
-        "length": 16,
-        "level": 0.075
+        "length": [],
+        "level": []
       },
       "wiring": {
         "controller": "con1",
@@ -257,8 +257,8 @@
       "Z_delay": 19,
       "dc_voltage": 0,
       "iswap": {
-        "length": 16,
-        "level": 0.075
+        "length": [],
+        "level": []
       },
       "wiring": {
         "controller": "con1",
@@ -276,8 +276,8 @@
       "Z_delay": 19,
       "dc_voltage": 0,
       "iswap": {
-        "length": 16,
-        "level": 0.075
+        "length": [],
+        "level": []
       },
       "wiring": {
         "controller": "con1",
@@ -290,8 +290,8 @@
     }],
   "resonators": [{
       "name": "r0",
-      "f_readout": 7256000000.0,
-      "lo": 7206000000.0,
+      "f_readout": 7263200000.0,
+      "lo": 7200000000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
       "depletion_time": 10000,
@@ -302,7 +302,7 @@
       "ge_threshold": 0.0,
       "RO_attenuation": [32,10],
       "TWPA": [6324000000.0,-10],
-      "tuning_curve": [0,0,0,0,0,0],
+      "tuning_curve": [7255.847792671296,191.18761913388335,28656.65909733081,0.07669865740269421,-0.03286196327107682,78.99424925653291],
       "wiring": {
         "controller": "con1",
         "I": 1,
@@ -441,8 +441,8 @@
     "time_of_flight": 304,
     "saturation_amp": 0.1,
     "saturation_len": 14000,
-    "con1_downconversion_offset_I": 0.0,
-    "con1_downconversion_offset_Q": 0.0,
+    "con1_downconversion_offset_I": 0.012084,
+    "con1_downconversion_offset_Q": 0.016385,
     "con1_downconversion_gain": 0,
     "con2_downconversion_offset_I": 0.0,
     "con2_downconversion_offset_Q": 0.0,
