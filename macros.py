@@ -6,6 +6,7 @@ All the macros below have been written and tested with the basic configuration. 
 
 from qm.qua import *
 from scipy import optimize
+from qutip import *
 import matplotlib.pyplot as plt
 import numpy as np
 from qualang_tools.loops import from_array
@@ -177,19 +178,18 @@ def readout_avg_macro(res_name: str, I=None, Q=None, I_st=None, Q_st=None):
 
 def ham(dc_flux, wr, Ec, Ej, c, phi0, g, output_flag):
     """
-    The Jaynes-Cummings Hamiltonian, all in units of MHz
-    Args:
-        dc_flux: dc flux voltage values
-        wr: bare resonator frequency
-        Ec: capacitive energy of qubit
-        Ej: Josephson energy of qubit
-        c, phi0: linear coefficient for the mapping between dc voltage and flux, following
-            magnetic flux = 2 * np.pi * c * dc_flux + phi0
-        output_flag: 1-rr, 2-qubit, otherwise-pass
-    Return:
-        freq_sys: frequency of the system, with the system being either resonator or qubit
-    """
-
+	The Jaynes-Cummings Hamiltonian, all in units of MHz
+	Args:
+		dc_flux: dc flux voltage values
+		wr: bare resonator frequency
+		Ec: capacitive energy of qubit
+		Ej: Josephson energy of qubit
+		c, phi0: linear coefficient for the mapping between dc voltage and flux, following
+			magnetic flux = 2 * np.pi * c * dc_flux + phi0
+		output_flag: 1-rr, 2-qubit, otherwise-pass
+	Return:
+		freq_sys: frequency of the system, with the system being either resonator or qubit
+	"""
     N = 4  # 0-3 photons
     a = tensor(destroy(N), qeye(N))  # cavity mode
     b = tensor(qeye(N), destroy(N))  # qubit
@@ -198,7 +198,7 @@ def ham(dc_flux, wr, Ec, Ej, c, phi0, g, output_flag):
     # Hamiltonian as a function of flux
     for k in range(np.size(dc_flux)):
         H = wr * a.dag() * a + (np.sqrt(8 * Ec * Ej * np.abs(
-            np.cos(self.phi_flux_rr(dc_flux[k], c,
+            np.cos(phi_flux_rr(dc_flux[k], c,
                                     phi0)))) - Ec) * b.dag() * b - Ec / 2 * b.dag() * b.dag() * b * b + g * (
                     a * b.dag() + a.dag() * b)
         w, v = np.linalg.eig(H)
@@ -218,17 +218,18 @@ def ham(dc_flux, wr, Ec, Ej, c, phi0, g, output_flag):
     freq_sys = np.array(freq_sys)
     return freq_sys
 
+
 def phi_flux_rr(dc_flux, c, phi0):
     """
-    linear mapping function from dc flux voltage to dc magnetic flux
-    magnetic flux = 2 * np.pi * c * dc_flux + phi0
-    Args:
-        dc_flux: the voltage we apply in experiment (QDAC)
-        c: slope
-        phi0: offset
-    Return:
-        the magnetic flux
-    """
+	linear mapping function from dc flux voltage to dc magnetic flux
+	magnetic flux = 2 * np.pi * c * dc_flux + phi0
+	Args:
+		dc_flux: the voltage we apply in experiment (QDAC)
+		c: slope
+		phi0: offset
+	Return:
+		the magnetic flux
+	"""
     return 2 * np.pi * c * dc_flux + phi0
 
 # Frequency tracking class

@@ -139,7 +139,7 @@ class AH_exp1D:
 
 		return res_freq_sweep[idx]
 
-	def peak_fit(self, x, y, method = "sinc"):
+	def peak_fit(self, x, y, method = "sinc", plot_flag = True):
 		"""
 		this function fits a single peak to sinc, lorentzian, or gaussian functions
 		Args:
@@ -170,14 +170,16 @@ class AH_exp1D:
 		popt, _ = curve_fit(lambda x, *guess: __fit_fun(x, *guess),
 							xdata=x, ydata=y, p0=init_guess, check_finite="true", bounds=(LB, UB))
 
-		fig = plt.figure()
-		plt.rcParams['figure.figsize'] = [8, 4]
-		plt.cla()
-		plt.plot(x/u.MHz,y,'.')
-		plt.plot(x/u.MHz,__fit_fun(x,popt[0],popt[1],popt[2],popt[3]),'r')
+		if plot_flag == True:
+			fig = plt.figure()
+			plt.rcParams['figure.figsize'] = [8, 4]
+			plt.cla()
+			plt.plot(x/u.MHz,y,'.')
+			plt.plot(x/u.MHz,__fit_fun(x,popt[0],popt[1],popt[2],popt[3]),'r')
 
-		plt.title("qubit spectroscopy")
-		plt.xlabel("Frequency [MHz]")
-		plt.ylabel("Signal [V]")
-		print(f"resonant frequency: {popt[1] / u.MHz:.3f} MHz")
+			plt.title("qubit spectroscopy")
+			plt.xlabel("Frequency [MHz]")
+			plt.ylabel("Signal [V]")
+			print(f"resonant frequency: {popt[1] / u.MHz:.3f} MHz")
+
 		return popt[1]

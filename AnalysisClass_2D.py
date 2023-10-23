@@ -31,6 +31,8 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 
+from AnalysisClass_1D import AH_exp1D
+
 class AH_exp2D:
 	"""
 	Class for analysis of 2D experiments
@@ -38,6 +40,7 @@ class AH_exp2D:
 		ham_param: parameters for the Jaynes-Cummings Hamiltonian. Temporary storage.
 		poly_param: parameters for the polynomial qubit tuning curve. Temporary storage.
 	Methods (useful ones):
+		exp1D: the class of AnalysisClass_1D
 		rr_vs_dc_flux(self, res_freq_sweep, dc_flux_sweep, sig_amp, init_guess = None)
 		qubit_vs_dc_flux_guess(self, ham_param = None)
 		ham(self, dc_flux, wr, Ec, Ej, c, phi0, g, output_flag)
@@ -47,23 +50,24 @@ class AH_exp2D:
 		# only for temporary storage
 		self.ham_param = []
 		self.poly_param = []
+		self.exp1D = AH_exp1D()
 
 	def rr_vs_dc_flux(self, res_freq_sweep, dc_flux_sweep, sig_amp, init_guess = None):
 		"""
 		Use the Jaynes-Cummings model to fit to the resonator vs dc_flux tuning curve
+		input in Hz, fitted parameters in MHz
 		Args:
 			res_freq_sweep: 1D array, assumes the same frequency sweep for all the dc flux values
 			dc_flux_sweep: 1D array of the dc flux swept values
 			sig_amp: amplitude of the I, Q signal
 			init_guess: [wr, Ec, Ej, c, phi0, g] for fitting to the Hamiltonian
 		Return:
-			popt: the fitted parameters of the Jaynes-Cummings Hamiltonian. Temporarily saved in AH_exp2D.ham_param.
+			ham_param: the fitted parameters of the Jaynes-Cummings Hamiltonian. Temporarily saved in AH_exp2D.ham_param.
 				should save to Analysis.ham_param, and machine.resonators[res_index].tuning_curve for long-term storage.
 		"""
-
 		# define init_guess for the fitting
 		if init_guess is None:
-			wr = np.min(res_freq_sweep) / u.MHz  # Resonator frequency
+			wr = np.min(res_freq_sweep)  # Resonator frequency
 			Ec = 170.0  # Capacitive energy
 			Ej = 30.0E3  # Inductive energy
 			c = 0.05  # Period in cosine function for flux
@@ -104,16 +108,16 @@ class AH_exp2D:
 		res_freq = np.array(res_freq)
 
 		# Fit data from res_freq to Hamiltonian function
-		popt, _ = curve_fit(lambda dc_flux_sweep, *guess: self.ham(dc_flux_sweep, *guess, 1),
+		ham_param, _ = curve_fit(lambda dc_flux_sweep, *guess: self.ham(dc_flux_sweep, *guess, 1),
 							xdata=dc_flux_sweep, ydata=res_freq/u.MHz, p0=init_guess, check_finite="true", bounds=(
 			(wr - 200, Ec - 50, Ej - 10000, 0.0001, -6, g - 50), (wr + 200, Ec + 100, Ej + 10000, 4, 6, g + 50)))
 
 		## plot data and fitting
 		plt.scatter(dc_flux_sweep.T, res_freq / u.MHz)
 		plt.plot(dc_flux_sweep.T, self.ham(dc_flux_sweep, *popt, 1))
-		self.ham_param = popt
+		self.ham_param = ham_param
 
-		return popt
+		return ham_param
 
 	def qubit_vs_dc_flux_guess(self, ham_param = None):
 		"""
@@ -140,6 +144,42 @@ class AH_exp2D:
 		plt.rcParams['figure.figsize'] = [8, 4]
 		plt.plot(dc_flux_fit, qubit_freq_est, 'o')
 		plt.plot(dc_flux_fit, np.polyval(poly_param,dc_flux_fit))
+
+		return poly_param
+
+	def qubit_vs_dc_flux(self, qubit_freq_sweep, dc_flux_sweep, sig_amp, fit_order = 4, plot_flag = True):
+		"""
+		Use 4th order polynomial to fit to the qubit vs dc_flux tuning curve
+		input in Hz, fitted parameters in MHz
+		sig at each dc flux value will be fitted to a gaussian first, then polynomial fit those qubit freq to the qubit tuning curve
+		Args:
+			qubit_freq_sweep: 1D array, need to be shaped to 2D, according to np.size(dc_flux_sweep)
+			dc_flux_sweep: 1D array of the dc flux swept values
+			sig_amp: 1D array of amplitude, same shape as qubit_freq_sweep, need to be shaped to 2D
+		Return:
+			poly_param: the fitted polynomial parameters. Temporarily saved in AH_exp2D.poly_param.
+				should save to Analysis.poly_param, and machine.qubits[qubit_index].tuning_curve for long-term storage.
+		"""
+
+		# reshape qubit_freq_sweep, sig_amp to 2D arrays
+		qubit_freq_sweep_plt = qubit_freq_sweep.reshape(np.size(dc_flux_sweep),
+														np.size(qubit_freq_sweep) // np.size(dc_flux_sweep))
+		sig_amp_plt = sig_amp.reshape(np.size(dc_flux_sweep),
+												  np.size(sig_amp) // np.size(dc_flux_sweep))
+		# extract qubit freq at each dc flux value
+		qubit_freq = []
+		for n_index, _ in enumerate(dc_flux_sweep):
+			qubit_freq_tmp = self.exp1D.peak_fit(x=qubit_freq_sweep_plt[n_index,:], y=sig_amp_plt[n_index,:], method="gaussian", plot_flag = False)
+			qubit_freq.append(qubit_freq_tmp / 1E6) # to MHz
+
+		# fit and plot
+		poly_param = np.polyfit(dc_flux_sweep, qubit_freq, deg=fit_order)
+		self.poly_param = poly_param
+		if plot_flag == True:
+			fig = plt.figure()
+			plt.rcParams['figure.figsize'] = [8, 4]
+			plt.plot(dc_flux_sweep, qubit_freq, 'o')
+			plt.plot(dc_flux_sweep, np.polyval(poly_param, dc_flux_sweep))
 
 		return poly_param
 

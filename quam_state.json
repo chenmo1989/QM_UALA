@@ -2,7 +2,7 @@
   "qubits": [{
       "name": "q0",
       "f_01": 6424284462.0,
-      "lo": 6475109639.0,
+      "lo": 6474588509.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
       "mixer_name": "octave_octave1_2",
@@ -15,7 +15,7 @@
       "pi_amp": [0.25],
       "T1": 1230,
       "T2": 123,
-      "tuning_curve": [-400.92166450438407,54.67834944461571,6428.713771987763],
+      "tuning_curve": [-66.435993,39.834362,-358.621957,55.42611,6418.064111],
       "wiring": {
         "controller": "con1",
         "I": 3,
@@ -158,7 +158,7 @@
       "name": "flux0",
       "flux_pulse_length": 16,
       "flux_pulse_amp": 0.25,
-      "max_frequency_point": 0.06819081417339797,
+      "max_frequency_point": 0.08094358285574674,
       "Z_delay": 19,
       "dc_voltage": 0,
       "iswap": {
@@ -291,7 +291,7 @@
   "resonators": [{
       "name": "r0",
       "f_readout": 7263380000.0,
-      "lo": 7313200000.0,
+      "lo": 7313363478.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
       "depletion_time": 10000,

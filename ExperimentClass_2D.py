@@ -114,7 +114,7 @@ class EH_1D:
 				I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 				Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 				# progress bar
-				progress_counter(iteration, n_avg, start_time=results.get_start_time())
+				#progress_counter(iteration, n_avg, start_time=results.get_start_time())
 
 			# fetch all data after live-updating
 			I, Q, iteration = results.fetch_all()
@@ -203,12 +203,13 @@ class EH_1D:
 			if fig is not None:
 				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
 			while results.is_processing():
+				time.sleep(0.1)
 				# Fetch results
-				I, Q, iteration = results.fetch_all()
-				I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
-				Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+				# I, Q, iteration = results.fetch_all()
+				# I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+				# Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 				# progress bar
-				progress_counter(iteration, n_avg, start_time=results.get_start_time())
+				# progress_counter(iteration, n_avg, start_time=results.get_start_time())
 
 			# fetch all data after live-updating
 			I, Q, iteration = results.fetch_all()
@@ -418,7 +419,7 @@ class EH_Rabi:
 		self.update_str_datetime = ref_to_update_str_datetime
 		self.exp1D = ref_to_local_exp1D
 
-	def qubit_freq_vs_dc_flux(self, dc_flux_sweep, qubit_index, res_index, flux_index, n_avg, cd_time,
+	def qubit_freq_vs_dc_flux(self, dc_flux_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, pi_amp_rel = 0.2,
 					  poly_param = None, ham_param = None, tPath=None, f_str_datetime=None, simulate_flag=False, simulation_len=1000, plot_flag=True):
 		"""
 		qubit spectroscopy vs dc flux 2D experiment
@@ -457,7 +458,7 @@ class EH_Rabi:
 		config = build_config(machine)
 
 		if poly_param is None:
-			poly_param = machine.qubits[qubit_index].turning_curve
+			poly_param = machine.qubits[qubit_index].tuning_curve
 		if ham_param is None:
 			ham_param = machine.resonators[res_index].tuning_curve
 
@@ -474,17 +475,22 @@ class EH_Rabi:
 		client = Labber.connectToServer('localhost')  # get list of instruments
 		QDevil = client.connectToInstrument('QDevil QDAC', dict(interface='Serial', address='3'))
 
+		if plot_flag == True:
+			fig = plt.figure()
+			plt.rcParams['figure.figsize'] = [8, 4]
+
+		start_time = time.time()
+
 		# 2D scan, RR frequency vs DC flux
 		for dc_index, dc_value in enumerate(dc_flux_sweep): # sweep over all dc fluxes
 			# Set dc flux value
 			QDevil.setValue("CH0" + str(flux_index + 1) + " Voltage", dc_value)
 			# 1D RR experiment
-			res_freq_est = ham(dc_value, ham_param[0], ham_param[1], ham_param[2], ham_param[3], ham_param[4], ham_param[5], output_flag = 1)
-			res_freq_sweep = res_freq_est + np.arange(-5E6, 5E6 + 1, 0.05E6)
-			start_time = time.time()
+			res_freq_est = ham([dc_value.tolist()], ham_param[0], ham_param[1], ham_param[2], ham_param[3], ham_param[4], ham_param[5], output_flag = 1) * 1E6 # to Hz
+			res_freq_sweep = int(res_freq_est[0]) + np.arange(-5E6, 5E6 + 1, 0.05E6)
 
-			machine, I_tmp, Q_tmp = self.exp1D.res_freq(res_freq_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, machine,
-					simulate_flag=False, simulation_len=1000, plot_flag=False)
+			machine, I_tmp, Q_tmp = self.exp1D.res_freq(res_freq_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, machine=machine,
+					simulate_flag=simulate_flag, simulation_len=simulation_len, fig = fig)
 			res_freq_tmp = self.exp1D.res_freq_analysis(res_freq_sweep, I_tmp, Q_tmp)
 			# save 1D RR data
 			I_res_tot.append(I_tmp)
@@ -496,22 +502,21 @@ class EH_Rabi:
 
 			# 1D qubit experiment
 			progress_counter(dc_index, len(dc_flux_sweep), start_time=start_time)
-			qubit_freq_est = np.polyval(poly_param,dc_value)
-			qubit_freq_sweep = qubit_freq_est + np.arange(-125E6, 125E6 + 1, 2E6)
-			machine, I_tmp, Q_tmp = qubit_freq(qubit_freq_sweep, qubit_index, res_index, flux_index, pi_amp_rel=1.0, ff_amp=0.0,
-					   n_avg=n_avg, cd_time=cd_time, machine=machine, simulate_flag=False, simulation_len=1000, plot_flag=False)
+			qubit_freq_est = np.polyval(poly_param,dc_value) * 1E6 # in Hz
+			qubit_freq_sweep = int(qubit_freq_est) + np.arange(-125E6, 125E6 + 1, 2E6)
+			machine, I_tmp, Q_tmp = self.exp1D.qubit_freq(qubit_freq_sweep, qubit_index, res_index, flux_index, pi_amp_rel=pi_amp_rel, ff_amp=0.0,
+					   n_avg=n_avg, cd_time=cd_time, machine=machine, simulate_flag=simulate_flag, simulation_len=simulation_len, fig = fig)
 			I_qubit_tot.append(I_tmp)
 			Q_qubit_tot.append(Q_tmp)
 			qubit_freq_sweep_tot.append(qubit_freq_sweep)
 
-		# plot
 		# save
 		I_qubit = np.concatenate(I_qubit_tot)
 		Q_qubit = np.concatenate(Q_qubit_tot)
 		qubit_freq_sweep = np.concatenate(qubit_freq_sweep_tot)
 		I_res = np.concatenate(I_res_tot)
 		Q_res = np.concatenate(Q_res_tot)
-		res_freq = np.concatenate(res_freq_tot)
+		#res_freq = np.concatenate(res_freq_tot)
 
 		sigs_qubit = u.demod2volts(I_qubit + 1j * Q_qubit, machine.resonators[res_index].readout_pulse_length)
 		sig_amp_qubit = np.abs(sigs_qubit)  # Amplitude
@@ -528,7 +533,21 @@ class EH_Rabi:
 		savemat(os.path.join(tPath, file_name),
 				{"RR_freq": res_freq_sweep, "sig_amp_res": sig_amp_res, "sig_phase_res": sig_phase_res, "dc_flux_sweep": dc_flux_sweep,
 				 "Q_freq": qubit_freq_sweep, "sig_amp_qubit": sig_amp_qubit, "sig_phase_qubit": sig_phase_qubit})
+
+		# plot
+		qubit_freq_sweep_plt = qubit_freq_sweep.reshape(np.size(dc_flux_sweep),
+													np.size(qubit_freq_sweep) // np.size(dc_flux_sweep))
+		sig_amp_qubit_plt = sig_amp_qubit.reshape(np.size(dc_flux_sweep),
+												  np.size(sig_amp_qubit) // np.size(dc_flux_sweep))
+		_, dc_flux_sweep_plt = np.meshgrid(qubit_freq_sweep_plt[0, :], dc_flux_sweep)
+		plt.pcolormesh(dc_flux_sweep_plt, qubit_freq_sweep_plt / u.MHz, sig_amp_qubit_plt, cmap="seismic")
+		plt.title("Qubit tuning curve")
+		plt.xlabel("DC flux level [V]")
+		plt.ylabel("Frequency [MHz]")
+		plt.colorbar()
+
 		return machine, qubit_freq_sweep, dc_flux_sweep, sig_amp_qubit
+
 class EH_exp2D:
 	"""
 	Class for running 2D experiments

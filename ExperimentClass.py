@@ -83,7 +83,8 @@ class ExperimentHandle:
 			else:
 				QDevil.setValue("CH" + str(n + 1) + " Voltage", 0.0)
 		# Set qubits to desired dc value
-		QDevil.setValue("CH0" + str(flux_index + 1) + " Voltage", machine.flux_lines[flux_index].max_frequency_point)
+		for flux_index_tmp in range(6):
+			QDevil.setValue("CH0" + str(flux_index_tmp + 1) + " Voltage", machine.flux_lines[flux_index_tmp].dc_voltage)
 
 		# digital attenuators
 		Vaunix1 = client.connectToInstrument('Painter Vaunix Lab Brick Digital Attenuator',
@@ -103,6 +104,7 @@ class ExperimentHandle:
 	def set_QDAC(self,qubit_index,res_index,flux_index,dc_value,machine = None):
 		if machine is None:
 			machine = QuAM("quam_state.json")
+
 		machine.flux_lines[flux_index].dc_voltage = dc_value
 		# connect to server
 		client = Labber.connectToServer('localhost')  # get list of instruments
