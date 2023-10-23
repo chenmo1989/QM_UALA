@@ -132,7 +132,7 @@ class EH_RR: # sub
 
 			return machine, adc1,adc2,adc1_single_run,adc2_single_run
 
-	def rr_freq(self, res_freq_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000):
+	def rr_freq(self, res_freq_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True):
 		"""
 		resonator spectroscopy experiment
 		this experiment find the resonance frequency by localizing the minima in pulsed transmission signal.
@@ -148,6 +148,7 @@ class EH_RR: # sub
 		:param f_str_datetime: datetime string for saving the data. Default is now.
 		:param simulate_flag: True-run simulation; False (default)-run experiment.
 		:param simulation_len: Length of the sequence to simulate. In clock cycles (4ns).
+		:param plot_flag: True (default) plot the experiment. False, do not plot.
 		Return:
 			machine
 			res_freq_sweep
@@ -202,9 +203,11 @@ class EH_RR: # sub
 			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
 			# Live plotting
 		    #%matplotlib qt
-			fig = plt.figure()
-			plt.rcParams['figure.figsize'] = [8, 4]
-			interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+			if plot_flag == True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+
 			while results.is_processing():
 				# Fetch results
 				I, Q, iteration = results.fetch_all()
@@ -212,11 +215,13 @@ class EH_RR: # sub
 				Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 				# progress bar
 				progress_counter(iteration, n_avg, start_time=results.get_start_time())
-				plt.cla()
-				plt.title("Resonator spectroscopy")
-				plt.plot((res_freq_sweep) / u.MHz, np.sqrt(I**2 +  Q**2), ".")
-				plt.xlabel("Frequency [MHz]")
-				plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
+
+				if plot_flag == True:
+					plt.cla()
+					plt.title("Resonator spectroscopy")
+					plt.plot((res_freq_sweep) / u.MHz, np.sqrt(I**2 +  Q**2), ".")
+					plt.xlabel("Frequency [MHz]")
+					plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
 
 			# fetch all data after live-updating
 			I, Q, iteration = results.fetch_all()
@@ -251,7 +256,7 @@ class EH_Rabi:
 		self.update_tPath = ref_to_update_tPath
 		self.update_str_datetime = ref_to_update_str_datetime
 
-	def qubit_freq(self, qubit_freq_sweep, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, ff_amp = 0.0, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000):
+	def qubit_freq(self, qubit_freq_sweep, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, ff_amp = 0.0, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True):
 		"""
 		qubit spectroscopy experiment in 1D (equivalent of ESR for spin qubit)
 
@@ -267,7 +272,7 @@ class EH_Rabi:
 		:param f_str_datetime: datetime string for saving the data. Default is now.
 		:param simulate_flag: True-run simulation; False (default)-run experiment.
 		:param simulation_len: Length of the sequence to simulate. In clock cycles (4ns).
-
+		:param plot_flag: True (default) plot the experiment. False, do not plot.
 		Return:
 			machine
 			qubit_freq_sweep
@@ -283,7 +288,7 @@ class EH_Rabi:
 		qubit_lo = machine.qubits[qubit_index].lo
 		qubit_if_sweep = qubit_freq_sweep - qubit_lo
 		qubit_if_sweep = qubit_if_sweep.astype(int)
-		ff_duration = machine.qubits[qubit_index].pi_length + 40
+		ff_duration = machine.qubits[qubit_index].pi_length[0] + 40
 
 		if np.max(abs(qubit_if_sweep)) > 400E6: # check if parameters are within hardware limit
 			print("qubit if range > 400MHz")
@@ -331,9 +336,10 @@ class EH_Rabi:
 			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
 			# Live plotting
 		    #%matplotlib qt
-			fig = plt.figure()
-			plt.rcParams['figure.figsize'] = [8, 4]
-			interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+			if plot_flag == True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
 			while results.is_processing():
 				# Fetch results
 				I, Q, iteration = results.fetch_all()
@@ -341,11 +347,13 @@ class EH_Rabi:
 				Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 				# progress bar
 				progress_counter(iteration, n_avg, start_time=results.get_start_time())
-				plt.cla()
-				plt.title("qubit spectroscopy")
-				plt.plot((qubit_freq_sweep) / u.MHz, np.sqrt(I**2 +  Q**2), ".")
-				plt.xlabel("Frequency [MHz]")
-				plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
+
+				if plot_flag == True:
+					plt.cla()
+					plt.title("qubit spectroscopy")
+					plt.plot((qubit_freq_sweep) / u.MHz, np.sqrt(I**2 +  Q**2), ".")
+					plt.xlabel("Frequency [MHz]")
+					plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
 
 			# fetch all data after live-updating
 			I, Q, iteration = results.fetch_all()

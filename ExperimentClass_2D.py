@@ -35,6 +35,203 @@ import Labber
 
 warnings.filterwarnings("ignore")
 
+class EH_1D:
+	"""
+	class for some 1D experiments used for 2D scans
+	"""
+	def res_freq(self, res_freq_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, machine = None, simulate_flag = False, simulation_len = 1000, fig = None):
+		"""
+		resonator spectroscopy experiment
+		this experiment find the resonance frequency by localizing the minima in pulsed transmission signal.
+		this 1D experiment is not automatically saved
+		Args:
+		:param res_freq_sweep: 1D array for resonator frequency sweep
+		:param qubit_index:
+		:param res_index:
+		:param flux_index:
+		:param n_avg: repetition of expeirment
+		:param cd_time: cooldown time between subsequent experiments
+		:param machine:
+		:param simulate_flag: True-run simulation; False (default)-run experiment.
+		:param simulation_len: Length of the sequence to simulate. In clock cycles (4ns).
+		:param fig: None (default). Fig reference, mainly to have the ability to interupt the experiment.
+		Return:
+			machine
+			I
+			Q
+		"""
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+
+		res_lo = machine.resonators[res_index].lo
+		res_if_sweep = res_freq_sweep - res_lo
+		res_if_sweep = res_if_sweep.astype(int)
+
+		if np.max(abs(res_if_sweep)) > 400E6: # check if parameters are within hardware limit
+			print("res if range > 400MHz")
+			return None, None, None
+
+		with program() as rr_freq_prog:
+			[I,Q,n,I_st,Q_st,n_st] = declare_vars()
+			df = declare(int)
+
+			with for_(n, 0, n < n_avg, n+1):
+				with for_(*from_array(df,res_if_sweep)):
+					update_frequency(machine.resonators[res_index].name, df)
+					readout_avg_macro(machine.resonators[res_index].name,I,Q)
+					wait(cd_time * u.ns, machine.resonators[res_index].name)
+					save(I, I_st)
+					save(Q, Q_st)
+				save(n, n_st)
+			with stream_processing():
+				n_st.save('iteration')
+				I_st.buffer(len(res_if_sweep)).average().save("I")
+				Q_st.buffer(len(res_if_sweep)).average().save("Q")
+
+		#####################################
+		#  Open Communication with the QOP  #
+		#####################################
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+		# Simulate or execute #
+		if simulate_flag: # simulation is useful to see the sequence, especially the timing (clock cycle vs ns)
+			simulation_config = SimulationConfig(duration=simulation_len)
+			job = qmm.simulate(config, rr_freq_prog, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			qm = qmm.open_qm(config)
+			job = qm.execute(rr_freq_prog)
+			# Get results from QUA program
+			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+			# Live plotting
+		    #%matplotlib qt
+			if fig is not None:
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+
+			while results.is_processing():
+				# Fetch results
+				I, Q, iteration = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+				# progress bar
+				progress_counter(iteration, n_avg, start_time=results.get_start_time())
+
+			# fetch all data after live-updating
+			I, Q, iteration = results.fetch_all()
+			# Convert I & Q to Volts
+			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+
+			return machine, I, Q
+
+	def qubit_freq(self, qubit_freq_sweep, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, ff_amp = 0.0, n_avg = 1E3, cd_time = 10E3, machine = None, simulate_flag = False, simulation_len = 1000, fig = None):
+		"""
+		qubit spectroscopy experiment in 1D (equivalent of ESR for spin qubit)
+		this 1D experiment is not automatically saved
+		Args:
+		:param qubit_freq_sweep: 1D array of qubit frequency sweep
+		:param qubit_index:
+		:param res_index:
+		:param flux_index:
+		:param n_avg: repetition of the experiments
+		:param cd_time: cooldown time between subsequent experiments
+		:param ff_amp: fast flux amplitude the overlaps with the Rabi pulse. The ff pulse is 40ns longer than Rabi pulse, and share the same center time.
+		:param machine:
+		:param simulate_flag: True-run simulation; False (default)-run experiment.
+		:param simulation_len: Length of the sequence to simulate. In clock cycles (4ns).
+		:param fig: None (default). Fig reference, mainly to have the ability to interupt the experiment.
+		Return:
+			machine
+			I
+			Q
+		"""
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+
+		qubit_lo = machine.qubits[qubit_index].lo
+		qubit_if_sweep = qubit_freq_sweep - qubit_lo
+		qubit_if_sweep = qubit_if_sweep.astype(int)
+		ff_duration = machine.qubits[qubit_index].pi_length[0] + 40
+
+		if np.max(abs(qubit_if_sweep)) > 400E6: # check if parameters are within hardware limit
+			print("qubit if range > 400MHz")
+			return None, None, None
+
+		with program() as qubit_freq_prog:
+			[I,Q,n,I_st,Q_st,n_st] = declare_vars()
+			df = declare(int)
+
+			with for_(n, 0, n < n_avg, n+1):
+				with for_(*from_array(df,qubit_if_sweep)):
+					update_frequency(machine.qubits[qubit_index].name, df)
+					play("const" * amp(ff_amp), machine.flux_lines[flux_index].name, duration=ff_duration * u.ns)
+					wait(5, machine.qubits[qubit_index].name)
+					play('pi'*amp(pi_amp_rel), machine.qubits[qubit_index].name)
+					align(machine.qubits[qubit_index].name, machine.flux_lines[flux_index].name,
+						  machine.resonators[res_index].name)
+					readout_avg_macro(machine.resonators[res_index].name,I,Q)
+					align()
+					wait(50)
+					# eliminate charge accumulation
+					play("const" * amp(-1 * ff_amp), machine.flux_lines[flux_index].name, duration=ff_duration * u.ns)
+					wait(cd_time * u.ns, machine.resonators[res_index].name)
+					save(I, I_st)
+					save(Q, Q_st)
+				save(n, n_st)
+			with stream_processing():
+				n_st.save('iteration')
+				I_st.buffer(len(qubit_if_sweep)).average().save("I")
+				Q_st.buffer(len(qubit_if_sweep)).average().save("Q")
+
+		#####################################
+		#  Open Communication with the QOP  #
+		#####################################
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+		# Simulate or execute #
+		if simulate_flag: # simulation is useful to see the sequence, especially the timing (clock cycle vs ns)
+			simulation_config = SimulationConfig(duration=simulation_len)
+			job = qmm.simulate(config, qubit_freq_prog, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			qm = qmm.open_qm(config)
+			job = qm.execute(qubit_freq_prog)
+			# Get results from QUA program
+			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+			# Live plotting
+		    #%matplotlib qt
+			if fig is not None:
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+			while results.is_processing():
+				# Fetch results
+				I, Q, iteration = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+				# progress bar
+				progress_counter(iteration, n_avg, start_time=results.get_start_time())
+
+			# fetch all data after live-updating
+			I, Q, iteration = results.fetch_all()
+			# Convert I & Q to Volts
+			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+
+			return machine, I, Q
+
+	def res_freq_analysis(self,res_freq_sweep, I, Q):
+		"""
+		analysis for the 1D resonator spectroscopy experiment, and find the resonance frequency by looking for the minima
+		Args:
+			res_freq_sweep: resonator frequency array
+			I: corresponding signal I array
+			Q: corresponding signal Q array
+		Return:
+			 res_freq_sweep[idx]: the resonance frequency
+		"""
+		sig_amp = np.sqrt(I ** 2 + Q ** 2)
+		idx = np.argmin(sig_amp)  # find minimum
+		return res_freq_sweep[idx]
+
 class EH_RR:
 	"""
 	class in ExperimentHandle, for Readout Resonator (RR) related 2D experiments
@@ -47,7 +244,7 @@ class EH_RR:
 		self.update_tPath = ref_to_update_tPath
 		self.update_str_datetime = ref_to_update_str_datetime
 
-	def rr_vs_dc_flux(self, res_freq_sweep, dc_flux_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000):
+	def rr_vs_dc_flux(self, res_freq_sweep, dc_flux_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True):
 		"""
 		resonator spectroscopy vs dc flux 2D experiment
 		this is supposed to be some of the first qubit characterization experiment. Purpose is to get an initial estimate
@@ -67,6 +264,7 @@ class EH_RR:
 		:param f_str_datetime: datetime string for saving the data. Default is now.
 		:param simulate_flag: True-run simulation; False (default)-run experiment.
 		:param simulation_len: Length of the sequence to simulate. In clock cycles (4ns).
+		:param plot_flag: True (default) plot the experiment. False, do not plot.
 		Return:
 			machine
 			res_freq_sweep
@@ -141,9 +339,10 @@ class EH_RR:
 			I_tot = []
 			Q_tot = []
 			# Live plotting
-			fig = plt.figure()
-			plt.rcParams['figure.figsize'] = [8, 4]
-			interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+			if plot_flag == True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
 
 			for m in range(len(dc_flux_sweep)):
 				# set QDAC voltage
@@ -176,11 +375,12 @@ class EH_RR:
 				sig_amp = np.abs(sigs)  # Amplitude
 				sig_phase = np.angle(sigs)  # Phase
 				# Plot results
-				plt.suptitle("RR spectroscopy")
-				plt.title("Resonator spectroscopy")
-				plt.plot((res_freq_sweep) / u.MHz, sig_amp, ".")
-				plt.xlabel("Frequency [MHz]")
-				plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
+				if plot_flag == True:
+					plt.suptitle("RR spectroscopy")
+					plt.title("Resonator spectroscopy")
+					plt.plot((res_freq_sweep) / u.MHz, sig_amp, ".")
+					plt.xlabel("Frequency [MHz]")
+					plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
 
 			# Interrupt the FPGA program
 			job.halt()
@@ -204,6 +404,131 @@ class EH_RR:
 		client.close()
 		return machine, res_freq_sweep, dc_flux_sweep, sig_amp
 
+class EH_Rabi:
+	"""
+	class in ExperimentHandle, for qubit Rabi related 2D experiments
+	Methods:
+		update_tPath
+		update_str_datetime
+		qubit_freq_vs_dc_flux(self, poly_param, ham_param, dc_flux_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000)
+	"""
+
+	def __init__(self, ref_to_update_tPath, ref_to_update_str_datetime,ref_to_local_exp1D):
+		self.update_tPath = ref_to_update_tPath
+		self.update_str_datetime = ref_to_update_str_datetime
+		self.exp1D = ref_to_local_exp1D
+
+	def qubit_freq_vs_dc_flux(self, dc_flux_sweep, qubit_index, res_index, flux_index, n_avg, cd_time,
+					  poly_param = None, ham_param = None, tPath=None, f_str_datetime=None, simulate_flag=False, simulation_len=1000, plot_flag=True):
+		"""
+		qubit spectroscopy vs dc flux 2D experiment
+		go back and force between 1D resonator spectroscopy and 1D qubit spectroscopy.
+		end result should be two 2D experiments, one for RR, one for qubit.
+		Requires the ham_param for RR, and poly_param for qubit
+		This sweep is not squared!!
+
+		Args:
+		:param poly_param: for qubit polynomial fit
+		:param ham_param: fot resonator hamiltonian fit
+		:param dc_flux_sweep: 1D array for the dc flux sweep
+		:param qubit_index:
+		:param res_index:
+		:param flux_index:
+		:param n_avg: repetition of the experiments
+		:param cd_time: cooldown time between subsequent experiments
+		:param tPath: target path/folder for saving the data. Default is today.
+		:param f_str_datetime: datetime string for saving the data. Default is now.
+		:param simulate_flag: True-run simulation; False (default)-run experiment.
+		:param simulation_len: Length of the sequence to simulate. In clock cycles (4ns).
+		:param plot_flag: True (default) plot the experiment. False, do not plot.
+		Return:
+			machine
+			qubit_freq_sweep
+			dc_flux_sweep
+			sig_amp_qubit
+		"""
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		# set up variables
+		machine = QuAM("quam_state.json") # this "machine" object is going to be changed by a lot, do not rely on it too much
+		config = build_config(machine)
+
+		if poly_param is None:
+			poly_param = machine.qubits[qubit_index].turning_curve
+		if ham_param is None:
+			ham_param = machine.resonators[res_index].tuning_curve
+
+		# Initialize empty vectors to store the global 'I' & 'Q' results
+		I_qubit_tot = []
+		Q_qubit_tot = []
+		qubit_freq_sweep_tot = []
+		I_res_tot = []
+		Q_res_tot = []
+		res_freq_sweep_tot = []
+		res_freq_tot = []
+
+		# QDAC communication through Labber
+		client = Labber.connectToServer('localhost')  # get list of instruments
+		QDevil = client.connectToInstrument('QDevil QDAC', dict(interface='Serial', address='3'))
+
+		# 2D scan, RR frequency vs DC flux
+		for dc_index, dc_value in enumerate(dc_flux_sweep): # sweep over all dc fluxes
+			# Set dc flux value
+			QDevil.setValue("CH0" + str(flux_index + 1) + " Voltage", dc_value)
+			# 1D RR experiment
+			res_freq_est = ham(dc_value, ham_param[0], ham_param[1], ham_param[2], ham_param[3], ham_param[4], ham_param[5], output_flag = 1)
+			res_freq_sweep = res_freq_est + np.arange(-5E6, 5E6 + 1, 0.05E6)
+			start_time = time.time()
+
+			machine, I_tmp, Q_tmp = self.exp1D.res_freq(res_freq_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, machine,
+					simulate_flag=False, simulation_len=1000, plot_flag=False)
+			res_freq_tmp = self.exp1D.res_freq_analysis(res_freq_sweep, I_tmp, Q_tmp)
+			# save 1D RR data
+			I_res_tot.append(I_tmp)
+			Q_res_tot.append(Q_tmp)
+			res_freq_tot.append(res_freq_tmp)
+			res_freq_sweep_tot.append(res_freq_sweep)
+			# set resonator freq for qubit spectroscopy
+			machine.resonators[res_index].f_readout = int(res_freq_tmp.tolist())
+
+			# 1D qubit experiment
+			progress_counter(dc_index, len(dc_flux_sweep), start_time=start_time)
+			qubit_freq_est = np.polyval(poly_param,dc_value)
+			qubit_freq_sweep = qubit_freq_est + np.arange(-125E6, 125E6 + 1, 2E6)
+			machine, I_tmp, Q_tmp = qubit_freq(qubit_freq_sweep, qubit_index, res_index, flux_index, pi_amp_rel=1.0, ff_amp=0.0,
+					   n_avg=n_avg, cd_time=cd_time, machine=machine, simulate_flag=False, simulation_len=1000, plot_flag=False)
+			I_qubit_tot.append(I_tmp)
+			Q_qubit_tot.append(Q_tmp)
+			qubit_freq_sweep_tot.append(qubit_freq_sweep)
+
+		# plot
+		# save
+		I_qubit = np.concatenate(I_qubit_tot)
+		Q_qubit = np.concatenate(Q_qubit_tot)
+		qubit_freq_sweep = np.concatenate(qubit_freq_sweep_tot)
+		I_res = np.concatenate(I_res_tot)
+		Q_res = np.concatenate(Q_res_tot)
+		res_freq = np.concatenate(res_freq_tot)
+
+		sigs_qubit = u.demod2volts(I_qubit + 1j * Q_qubit, machine.resonators[res_index].readout_pulse_length)
+		sig_amp_qubit = np.abs(sigs_qubit)  # Amplitude
+		sig_phase_qubit = np.angle(sigs_qubit)  # Phase
+		sigs_res = u.demod2volts(I_res + 1j * Q_res, machine.resonators[res_index].readout_pulse_length)
+		sig_amp_res = np.abs(sigs_res)  # Amplitude
+		sig_phase_res = np.angle(sigs_res)  # Phase
+		# save data
+		exp_name = 'qubit_freq_vs_dc_flux'
+		qubit_name = 'Q' + str(qubit_index + 1)
+		f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+		file_name = f_str + '.mat'
+		json_name = f_str + '_state.json'
+		savemat(os.path.join(tPath, file_name),
+				{"RR_freq": res_freq_sweep, "sig_amp_res": sig_amp_res, "sig_phase_res": sig_phase_res, "dc_flux_sweep": dc_flux_sweep,
+				 "Q_freq": qubit_freq_sweep, "sig_amp_qubit": sig_amp_qubit, "sig_phase_qubit": sig_phase_qubit})
+		return machine, qubit_freq_sweep, dc_flux_sweep, sig_amp_qubit
 class EH_exp2D:
 	"""
 	Class for running 2D experiments
@@ -218,6 +543,7 @@ class EH_exp2D:
 		self.update_tPath = ref_to_update_tPath
 		self.update_str_datetime = ref_to_update_str_datetime
 		self.RR = EH_RR(ref_to_update_tPath,ref_to_update_str_datetime)
-		#self.Rabi = EH_Rabi(ref_to_update_tPath,ref_to_update_str_datetime)
+		self.exp1D = EH_1D()
+		self.Rabi = EH_Rabi(ref_to_update_tPath,ref_to_update_str_datetime,self.exp1D)
 		#self.Echo = EH_Echo(ref_to_update_tPath,ref_to_update_str_datetime)
 		#self.CPMG = EH_CPMG(ref_to_update_tPath,ref_to_update_str_datetime)

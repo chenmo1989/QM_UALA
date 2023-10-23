@@ -59,8 +59,8 @@ class Qubit(QuamComponent):
     ac_stark_detuning: float
     x180_length: int
     x180_amp: float
-    pi_length: int
-    pi_amp: float
+    pi_length: List[Union[str, int, float, bool, list]]
+    pi_amp: List[Union[str, int, float, bool, list]]
     T1: int
     T2: int
     tuning_curve: List[Union[str, int, float, bool, list]]

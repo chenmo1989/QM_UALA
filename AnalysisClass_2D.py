@@ -143,7 +143,7 @@ class AH_exp2D:
 
 		return poly_param
 
-	def ham(self, dc_flux, wr, Ec, Ej, c, phi0, g, output_flag):
+	def ham(self, dc_flux, wr, Ec, Ej, c, phi0, g, output_flag = 1):
 		"""
 		The Jaynes-Cummings Hamiltonian, all in units of MHz
 		Args:

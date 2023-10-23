@@ -17,8 +17,8 @@ state = {
             "ac_stark_detuning": 0.0,
             "x180_length": 180,
             "x180_amp": 0.25,
-            "pi_length": 16,
-            "pi_amp": 0.25,
+            "pi_length": [24],
+            "pi_amp": [0.25],
             "wiring": {
                 "controller": "con1",
                 "I": 3,

@@ -29,8 +29,8 @@ for i in range(6):
             "ac_stark_detuning": 0.0,
             "x180_length": 40,
             "x180_amp": 0.25,
-            "pi_length": 16,
-            "pi_amp": 0.25,
+            "pi_length": [24],
+            "pi_amp": [0.25],
             "wiring": {
                 "controller": qubits_connectivity[0][2],
                 "I": qubits_connectivity[0][0],

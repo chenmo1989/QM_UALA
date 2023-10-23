@@ -100,12 +100,16 @@ class ExperimentHandle:
 
 		client.close()
 
-	def set_QDAC(self,qubit_index,res_index,flux_index,dc_value):
+	def set_QDAC(self,qubit_index,res_index,flux_index,dc_value,machine = None):
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		machine.flux_lines[flux_index].dc_voltage = dc_value
 		# connect to server
 		client = Labber.connectToServer('localhost')  # get list of instruments
 		QDevil = client.connectToInstrument('QDevil QDAC', dict(interface='Serial', address='3'))
 		QDevil.setValue("CH0" + str(flux_index + 1) + " Voltage", dc_value)
 		client.close()
+		return machine
 
 	def octave_calibration(self,qubit_index,res_index,flux_index,machine = None):
 		"""

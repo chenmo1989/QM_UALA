@@ -300,7 +300,7 @@ def build_config(quam: QuAM):
             **{
                 f"pi_pulse{i}": {
                     "operation": "control",
-                    "length": quam.qubits[i].pi_length,
+                    "length": quam.qubits[i].pi_length[0],
                     "waveforms": {
                         "I": f"pi_wf{i}",
                         "Q": "zero_wf",
@@ -311,7 +311,7 @@ def build_config(quam: QuAM):
             **{
                 f"pi_over_two_pulse{i}": {
                     "operation": "control",
-                    "length": quam.qubits[i].pi_length,
+                    "length": quam.qubits[i].pi_length[0],
                     "waveforms": {
                         "I": f"pi_over_two_wf{i}",
                         "Q": "zero_wf",
@@ -398,11 +398,11 @@ def build_config(quam: QuAM):
                 for i in range(len(quam.resonators))
             },
             **{
-                f"pi_wf{i}": {"type": "constant", "sample": quam.qubits[i].pi_amp}
+                f"pi_wf{i}": {"type": "constant", "sample": quam.qubits[i].pi_amp[0]}
                 for i in range(len(quam.qubits))
             },
             **{
-                f"pi_over_two_wf{i}": {"type": "constant", "sample": quam.qubits[i].pi_amp/2}
+                f"pi_over_two_wf{i}": {"type": "constant", "sample": quam.qubits[i].pi_amp[0]/2}
                 for i in range(len(quam.qubits))
             },
             **{f"x90_I_wf{i}": {"type": "arbitrary", "samples": x90_I_wf[i].tolist()} for i in range(len(quam.qubits))},
