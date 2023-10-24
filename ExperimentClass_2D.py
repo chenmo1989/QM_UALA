@@ -561,8 +561,34 @@ class EH_Rabi:
 
 		return machine, qubit_freq_sweep, dc_flux_sweep, sig_amp_qubit
 
-	def qubit_freq_vs_fast_flux(self, ff_sweep, qubit_if_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, pi_amp_rel = 1.0, ff_to_dc_ratio = None,
+	def qubit_freq_vs_fast_flux_slow(self, ff_sweep_abs, qubit_if_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, pi_amp_rel = 1.0, ff_to_dc_ratio = None,
 					  poly_param = None, tPath=None, f_str_datetime=None, simulate_flag=False, simulation_len=1000, plot_flag=True):
+		"""
+		2D qubit spectroscopy experiment vs fast flux
+		this is an assembly of 1D qubit spectroscopy (from subroutines). Each 1D scan is called in a python loop, therefore slow.
+
+		Args:
+		:param ff_sweep_abs: absolute voltage value of fast flux sweep. [-0.5V, 0.5V]
+		:param qubit_if_sweep: sweep range around the estimated qubit frequency
+		:param qubit_index:
+		:param res_index:
+		:param flux_index:
+		:param n_avg:
+		:param cd_time:
+		:param pi_amp_rel: 1.0 (default). Relative knob to tune the pi pulse amplitude
+		:param ff_to_dc_ratio: None (default). If not None, then tuning curve comes from dc flux tuning curve. find qubit freq est around the sweet spot, using this dc/ff ratio.
+		:param poly_param:
+		:param tPath:
+		:param f_str_datetime:
+		:param simulate_flag:
+		:param simulation_len:
+		:param plot_flag:
+		Return:
+			machine
+			qubit_freq_sweep
+			ff_sweep_abs
+			sig_amp_qubit
+		"""
 		if tPath is None:
 			tPath = self.update_tPath()
 		if f_str_datetime is None:
@@ -575,7 +601,7 @@ class EH_Rabi:
 		if poly_param is None:
 			poly_param = machine.qubits[qubit_index].tuning_curve
 
-		ff_sweep_abs = ff_sweep * machine.flux_lines[flux_index].flux_pulse_amp
+		ff_sweep = ff_sweep_abs / machine.flux_lines[flux_index].flux_pulse_amp
 		if ff_to_dc_ratio is None:
 			qubit_freq_est_sweep = np.polyval(poly_param, ff_sweep_abs) * 1E6 # Hz
 		else:
@@ -633,7 +659,7 @@ class EH_Rabi:
 		I_qubit = np.concatenate(I_qubit_tot)
 		Q_qubit = np.concatenate(Q_qubit_tot)
 		qubit_freq_sweep = np.concatenate(qubit_freq_sweep_tot)
-		sigs_qubit = u.demod2volts(I_qubit + 1j * Q_qubit, machine.resonators[res_index].readout_pulse_length)
+		sigs_qubit = I_qubit + 1j * Q_qubit
 		sig_amp_qubit = np.abs(sigs_qubit)  # Amplitude
 		sig_phase_qubit = np.angle(sigs_qubit)  # Phase
 		# save data
@@ -651,6 +677,188 @@ class EH_Rabi:
 														np.size(qubit_freq_sweep) // np.size(ff_sweep))
 		sig_amp_qubit_plt = sig_amp_qubit.reshape(np.size(ff_sweep),
 												  np.size(sig_amp_qubit) // np.size(ff_sweep))
+		_, ff_sweep_plt = np.meshgrid(qubit_freq_sweep_plt[0, :], ff_sweep_abs)
+		plt.pcolormesh(ff_sweep_plt, qubit_freq_sweep_plt / u.MHz, sig_amp_qubit_plt, cmap="seismic")
+		plt.title("Qubit tuning curve")
+		plt.xlabel("fast flux level [V]")
+		plt.ylabel("Frequency [MHz]")
+		plt.colorbar()
+
+		return machine, qubit_freq_sweep, ff_sweep_abs, sig_amp_qubit
+
+	def qubit_freq_fast_flux_subroutine(self, ff_sweep_rel, qubit_freq_est_sweep, qubit_if_sweep, qubit_index, res_index, flux_index,
+										pi_amp_rel = 1.0, n_avg = 1E3, cd_time = 10E3, machine = None, simulate_flag = False, simulation_len = 1000, fig = None):
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+
+		qubit_lo = machine.qubits[qubit_index].lo
+		qubit_if_est_sweep = np.round(qubit_freq_est_sweep - qubit_lo)
+		ff_duration = machine.qubits[qubit_index].pi_length[0] + 40
+
+		# construct qubit freq_sweep_tot
+		qubit_freq_sweep_tot = []
+		for qubit_freq_i in qubit_freq_est_sweep:
+			qubit_freq_sweep_tot.append(qubit_freq_i + qubit_if_sweep)
+
+		with program() as qubit_freq_prog:
+			[I,Q,n,I_st,Q_st,n_st] = declare_vars()
+			df = declare(int)
+			q_freq_est = declare(int)
+			da = declare(fixed)
+			df_tmp = declare(int)
+
+			with for_(n, 0, n < n_avg, n+1):
+				with for_each_((da,q_freq_est),(ff_sweep_rel,qubit_if_est_sweep)):
+					with for_(*from_array(df,qubit_if_sweep)):
+						assign(df_tmp, df + q_freq_est)
+						update_frequency(machine.qubits[qubit_index].name, df_tmp)
+						play("const" * amp(da), machine.flux_lines[flux_index].name, duration=ff_duration * u.ns)
+						wait(5, machine.qubits[qubit_index].name)
+						play('pi'*amp(pi_amp_rel), machine.qubits[qubit_index].name)
+						align(machine.qubits[qubit_index].name, machine.flux_lines[flux_index].name,
+							  machine.resonators[res_index].name)
+						readout_avg_macro(machine.resonators[res_index].name,I,Q)
+						align()
+						wait(50)
+						# eliminate charge accumulation
+						play("const" * amp(-1 * da), machine.flux_lines[flux_index].name, duration=ff_duration * u.ns)
+						wait(cd_time * u.ns, machine.resonators[res_index].name)
+						save(I, I_st)
+						save(Q, Q_st)
+				save(n, n_st)
+			with stream_processing():
+				I_st.buffer(len(qubit_if_sweep)).buffer(len(ff_sweep_rel)).average().save("I")
+				Q_st.buffer(len(qubit_if_sweep)).buffer(len(ff_sweep_rel)).average().save("Q")
+				n_st.save("iteration")
+
+		#####################################
+		#  Open Communication with the QOP  #
+		#####################################
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+		# Simulate or execute #
+		if simulate_flag: # simulation is useful to see the sequence, especially the timing (clock cycle vs ns)
+			simulation_config = SimulationConfig(duration=simulation_len)
+			job = qmm.simulate(config, qubit_freq_prog, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			qm = qmm.open_qm(config)
+			job = qm.execute(qubit_freq_prog)
+			# Get results from QUA program
+			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+			# Live plotting
+		    #%matplotlib qt
+			if fig is not None:
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+			while results.is_processing():
+				time.sleep(0.1)
+				# Fetch results
+				# I, Q, iteration = results.fetch_all()
+				# I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+				# Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+				# progress bar
+				# progress_counter(iteration, n_avg, start_time=results.get_start_time())
+
+			# fetch all data after live-updating
+			I, Q, iteration = results.fetch_all()
+			# Convert I & Q to Volts
+			I_tot = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+			Q_tot = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+
+			return machine, qubit_freq_sweep_tot, I_tot, Q_tot, ff_sweep_rel * machine.flux_lines[flux_index].flux_pulse_amp
+
+	def qubit_freq_vs_fast_flux(self, ff_sweep_abs, qubit_if_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, pi_amp_rel = 1.0, ff_to_dc_ratio = None,
+					  poly_param = None, tPath=None, f_str_datetime=None, simulate_flag=False, simulation_len=1000, plot_flag=True):
+
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		# set up variables
+		machine = QuAM("quam_state.json") # this "machine" object is going to be changed by a lot, do not rely on it too much
+		config = build_config(machine)
+
+		if poly_param is None:
+			poly_param = machine.qubits[qubit_index].tuning_curve
+
+		ff_sweep = ff_sweep_abs / machine.flux_lines[flux_index].flux_pulse_amp
+		if ff_to_dc_ratio is None:
+			qubit_freq_est_sweep = np.polyval(poly_param, ff_sweep_abs) * 1E6 # Hz
+		else:
+			qubit_freq_est_sweep = np.polyval(poly_param, (ff_to_dc_ratio * ff_sweep_abs) + machine.flux_lines[flux_index].max_frequency_point) * 1E6 # Hz
+		qubit_freq_est_sweep = np.round(qubit_freq_est_sweep)
+
+		# divide and conquer!
+		freq_est_seg_index = [0]
+		for freq_est_index, freq_est_value in enumerate(qubit_freq_est_sweep):
+			if freq_est_value < qubit_freq_est_sweep[freq_est_seg_index[-1]] - 500E6:
+				freq_est_seg_index.append(freq_est_index)
+		freq_est_seg_index.append(len(qubit_freq_est_sweep))
+
+		if plot_flag == True:
+			fig = plt.figure()
+			plt.rcParams['figure.figsize'] = [8, 4]
+
+		# Initialize empty vectors to store the global 'I' & 'Q' results
+		I_tot = []
+		Q_tot = []
+		qubit_freq_sweep_tot = []
+		ff_sweep_tot = []
+
+		start_time = time.time()
+
+		for freq_seg_index, freq_est_value in enumerate(freq_est_seg_index[1:]):
+			index_seg_lower = freq_est_seg_index[freq_seg_index]
+			index_seg_upper = freq_est_value
+
+			ff_sweep_rel_seg = ff_sweep[index_seg_lower:index_seg_upper]
+			qubit_freq_est_sweep_seg = qubit_freq_est_sweep[index_seg_lower:index_seg_upper]
+
+			qubit_lo = max(qubit_freq_est_sweep_seg) + max(qubit_if_sweep) - 350E6
+			machine.qubits[qubit_index].lo = int(qubit_lo.tolist()) + 0E6
+			machine.qubits[qubit_index].f_01 = int(max(qubit_freq_est_sweep_seg).tolist()) + 0E6
+			self.octave_calibration(qubit_index,res_index,flux_index,machine = machine)
+
+			if plot_flag == True:
+				machine, qubit_freq_sweep_tmp, I_tmp, Q_tmp, ff_sweep_tmp = self.qubit_freq_fast_flux_subroutine(
+					ff_sweep_rel_seg, qubit_freq_est_sweep_seg, qubit_if_sweep,
+					qubit_index, res_index, flux_index, pi_amp_rel=1.0, n_avg=n_avg, cd_time=cd_time, machine=machine,
+					fig=fig)
+			else:
+				machine, qubit_freq_sweep_tmp, I_tmp, Q_tmp, ff_sweep_tmp = self.qubit_freq_fast_flux_subroutine(
+					ff_sweep_rel_seg, qubit_freq_est_sweep_seg, qubit_if_sweep,
+					qubit_index, res_index, flux_index, pi_amp_rel=1.0, n_avg=n_avg, cd_time=cd_time, machine=machine)
+
+			I_tot.append(I_tmp)
+			Q_tot.append(Q_tmp)
+			qubit_freq_sweep_tot.append(qubit_freq_sweep_tmp)
+			ff_sweep_tot.append(ff_sweep_tmp)
+
+		# save
+		I_qubit = np.concatenate(I_tot)
+		Q_qubit = np.concatenate(Q_tot)
+		qubit_freq_sweep = np.concatenate(qubit_freq_sweep_tot)
+		ff_sweep_abs = np.concatenate(ff_sweep_tot)
+		sigs_qubit = I_qubit + 1j * Q_qubit
+		sig_amp_qubit = np.abs(sigs_qubit)  # Amplitude
+		sig_phase_qubit = np.angle(sigs_qubit)  # Phase
+		# save data
+		exp_name = 'qubit_freq_vs_fast_flux'
+		qubit_name = 'Q' + str(qubit_index + 1)
+		f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+		file_name = f_str + '.mat'
+		json_name = f_str + '_state.json'
+		savemat(os.path.join(tPath, file_name),
+				{"fast_flux_sweep": ff_sweep_abs,
+				 "Q_freq": qubit_freq_sweep, "sig_amp_qubit": sig_amp_qubit, "sig_phase_qubit": sig_phase_qubit})
+
+		# plot
+		qubit_freq_sweep_plt = qubit_freq_sweep.reshape(np.size(ff_sweep_abs),
+														np.size(qubit_freq_sweep) // np.size(ff_sweep_abs))
+		sig_amp_qubit_plt = sig_amp_qubit.reshape(np.size(ff_sweep_abs),
+												  np.size(sig_amp_qubit) // np.size(ff_sweep_abs))
 		_, ff_sweep_plt = np.meshgrid(qubit_freq_sweep_plt[0, :], ff_sweep_abs)
 		plt.pcolormesh(ff_sweep_plt, qubit_freq_sweep_plt / u.MHz, sig_amp_qubit_plt, cmap="seismic")
 		plt.title("Qubit tuning curve")
