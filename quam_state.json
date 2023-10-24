@@ -11,7 +11,7 @@
       "ac_stark_detuning": 0.0,
       "x180_length": 180,
       "x180_amp": 0.25,
-      "pi_length": [20],
+      "pi_length": [36],
       "pi_amp": [0.25],
       "T1": 1230,
       "T2": 123,

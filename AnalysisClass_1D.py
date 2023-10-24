@@ -30,6 +30,7 @@ import warnings
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 
 class AH_exp1D:
 	"""
@@ -183,3 +184,50 @@ class AH_exp1D:
 			print(f"resonant frequency: {popt[1] / u.MHz:.3f} MHz")
 
 		return popt[1]
+
+	def rabi_length(self, x, y, plot_flag = True):
+		"""
+		this function fits a single oscillatory curve to a cosine, typically used for a rabi oscillation
+		note x is in units of clock cycle! There is a factor of 4 in the plots and the output!
+		:param x: x data
+		:param y: y data
+		:param plot_flag:
+		Return:
+			fitted pi pulse length
+		"""
+		def __fit_fun(x, c0, c1, c2, c3):
+			return c2+ c1*np.cos(x*2*np.pi*c0+c3)
+
+		delta = abs(x[0] - x[1])
+		Fs = 1 / delta  # Sampling frequency
+		L = np.size(x)
+		NFFT = int(2 * 2 ** self.next_power_of_2(L))
+		Freq = Fs / 2 * np.linspace(0, 1, NFFT // 2 + 1, endpoint=True)
+		Y = np.fft.fft(y - np.mean(y), NFFT) / L
+		DataY = abs(Y[0:(NFFT // 2)]) ** 2
+		index = np.argmax(DataY)
+		amp = abs(max(y) - min(y)) / 2
+		rabi = Freq[index]
+		init_guess = [rabi, amp, np.mean(y), 0]
+		LB = [0.5 * rabi, -2*amp, -1, -6]
+		UB = [2 * rabi, 2*amp, 1, 6]
+
+		popt, _ = curve_fit(lambda x, *guess: __fit_fun(x, *guess),
+							xdata=x, ydata=y, p0=init_guess, check_finite="true", bounds=(LB, UB))
+
+		if plot_flag == True:
+			fig = plt.figure()
+			plt.rcParams['figure.figsize'] = [8, 4]
+			plt.cla()
+			plt.plot(x * 4,y,'.') # in ns
+			plt.plot(x * 4,__fit_fun(x,popt[0],popt[1],popt[2],popt[3]),'r')
+
+			plt.title("qubit rabi")
+			plt.xlabel("tau [ns]")
+			plt.ylabel("Signal [V]")
+			print(f"rabi_pi_pulse: {np.round((1/2-popt[3]/np.pi)/(popt[0])*4):.1f} ns")
+
+		return np.round((1/2-popt[3]/np.pi)/(popt[0])*4)
+
+	def next_power_of_2(self,x):
+		return 0 if x == 0 else math.ceil(math.log2(x))
