@@ -702,18 +702,16 @@ class EH_Rabi:
 		for qubit_freq_i in qubit_freq_est_sweep:
 			qubit_freq_sweep_tot.append(qubit_freq_i + qubit_if_sweep)
 
-		with program() as qubit_freq_prog:
+		with program() as qubit_freq_2D_prog:
 			[I,Q,n,I_st,Q_st,n_st] = declare_vars()
 			df = declare(int)
-			q_freq_est = declare(int)
-			da = declare(fixed)
-			df_tmp = declare(int)
+			q_freq_est = declare(int) # estimated qubit freq
+			da = declare(fixed) # fast flux amplitude
 
 			with for_(n, 0, n < n_avg, n+1):
-				with for_each_((da,q_freq_est),(ff_sweep_rel,qubit_if_est_sweep)):
+				with for_each_((da, q_freq_est), (ff_sweep_rel, qubit_if_est_sweep)):
 					with for_(*from_array(df,qubit_if_sweep)):
-						assign(df_tmp, df + q_freq_est)
-						update_frequency(machine.qubits[qubit_index].name, df_tmp)
+						update_frequency(machine.qubits[qubit_index].name, df + q_freq_est)
 						play("const" * amp(da), machine.flux_lines[flux_index].name, duration=ff_duration * u.ns)
 						wait(5, machine.qubits[qubit_index].name)
 						play('pi'*amp(pi_amp_rel), machine.qubits[qubit_index].name)
@@ -740,11 +738,11 @@ class EH_Rabi:
 		# Simulate or execute #
 		if simulate_flag: # simulation is useful to see the sequence, especially the timing (clock cycle vs ns)
 			simulation_config = SimulationConfig(duration=simulation_len)
-			job = qmm.simulate(config, qubit_freq_prog, simulation_config)
+			job = qmm.simulate(config, qubit_freq_2D_prog, simulation_config)
 			job.get_simulated_samples().con1.plot()
 		else:
 			qm = qmm.open_qm(config)
-			job = qm.execute(qubit_freq_prog)
+			job = qm.execute(qubit_freq_2D_prog)
 			# Get results from QUA program
 			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
 			# Live plotting
