@@ -575,10 +575,11 @@ class EH_Rabi:
 		if poly_param is None:
 			poly_param = machine.qubits[qubit_index].tuning_curve
 
+		ff_sweep_abs = ff_sweep * machine.flux_lines[flux_index].flux_pulse_amp
 		if ff_to_dc_ratio is None:
-			qubit_freq_est_sweep = np.polyval(poly_param, ff_sweep) * 1E6 # Hz
+			qubit_freq_est_sweep = np.polyval(poly_param, ff_sweep_abs) * 1E6 # Hz
 		else:
-			qubit_freq_est_sweep = np.polyval(poly_param, (ff_to_dc_ratio * ff_sweep) + machine.flux_lines[flux_index].max_frequency_point) * 1E6 # Hz
+			qubit_freq_est_sweep = np.polyval(poly_param, (ff_to_dc_ratio * ff_sweep_abs) + machine.flux_lines[flux_index].max_frequency_point) * 1E6 # Hz
 		qubit_freq_est_sweep = np.round(qubit_freq_est_sweep)
 
 		qubit_lo = machine.qubits[qubit_index].lo
@@ -597,17 +598,19 @@ class EH_Rabi:
 		for ff_index, ff_value in enumerate(ff_sweep):  # sweep over all fast fluxes
 			progress_counter(ff_index, len(ff_sweep), start_time=start_time)
 			qubit_freq_est = qubit_freq_est_sweep[ff_index]
-			if qubit_lo - qubit_freq_est - max(qubit_if_sweep) < 50E6: # need to increase LO
-				qubit_lo = qubit_freq_est + max(qubit_if_sweep) + 50E6
+
+			if qubit_lo - qubit_freq_est + max(qubit_if_sweep) > 400E6: # need to decrease LO
+				qubit_lo = qubit_freq_est + max(qubit_if_sweep) - 300E6
 				machine.qubits[qubit_index].lo = int(qubit_lo.tolist()) + 0E6
 				machine.qubits[qubit_index].f_01 = int(qubit_freq_est.tolist()) + 0E6
 				self.octave_calibration(qubit_index,res_index,flux_index,machine = machine)
 
-			if qubit_lo - qubit_freq_est + max(qubit_if_sweep) > 400E6: # need to decrease LO
-				qubit_lo = qubit_freq_est + max(qubit_if_sweep) + 50E6
+			if qubit_lo - qubit_freq_est - max(qubit_if_sweep) < -400E6: # need to increase LO
+				qubit_lo = qubit_freq_est + max(qubit_if_sweep) - 300E6
 				machine.qubits[qubit_index].lo = int(qubit_lo.tolist()) + 0E6
 				machine.qubits[qubit_index].f_01 = int(qubit_freq_est.tolist()) + 0E6
 				self.octave_calibration(qubit_index,res_index,flux_index,machine = machine)
+
 			qubit_freq_sweep = qubit_freq_est + qubit_if_sweep
 
 			if plot_flag == True:
@@ -640,7 +643,7 @@ class EH_Rabi:
 		file_name = f_str + '.mat'
 		json_name = f_str + '_state.json'
 		savemat(os.path.join(tPath, file_name),
-				{"fast_flux_sweep": ff_sweep,
+				{"fast_flux_sweep": ff_sweep_abs,
 				 "Q_freq": qubit_freq_sweep, "sig_amp_qubit": sig_amp_qubit, "sig_phase_qubit": sig_phase_qubit})
 
 		# plot
@@ -648,14 +651,14 @@ class EH_Rabi:
 														np.size(qubit_freq_sweep) // np.size(ff_sweep))
 		sig_amp_qubit_plt = sig_amp_qubit.reshape(np.size(ff_sweep),
 												  np.size(sig_amp_qubit) // np.size(ff_sweep))
-		_, ff_sweep_plt = np.meshgrid(qubit_freq_sweep_plt[0, :], ff_sweep)
+		_, ff_sweep_plt = np.meshgrid(qubit_freq_sweep_plt[0, :], ff_sweep_abs)
 		plt.pcolormesh(ff_sweep_plt, qubit_freq_sweep_plt / u.MHz, sig_amp_qubit_plt, cmap="seismic")
 		plt.title("Qubit tuning curve")
 		plt.xlabel("fast flux level [V]")
 		plt.ylabel("Frequency [MHz]")
 		plt.colorbar()
 
-		return machine, qubit_freq_sweep, ff_sweep * machine.flux_lines[flux_index].flux_pulse_amp, sig_amp_qubit
+		return machine, qubit_freq_sweep, ff_sweep_abs, sig_amp_qubit
 
 class EH_exp2D:
 	"""
