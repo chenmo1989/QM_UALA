@@ -24,7 +24,7 @@ class EH_expsave:
 class ExperimentHandle:
 	def __init__(self):
 		self.exp1D = EH_exp1D(self.update_tPath,self.update_str_datetime)
-		self.exp2D = EH_exp2D(self.update_tPath,self.update_str_datetime)
+		self.exp2D = EH_exp2D(self.update_tPath,self.update_str_datetime,self.octave_calibration)
 		#self.expsave = EH_expsave()
 
 		now = datetime.datetime.now()
@@ -105,7 +105,7 @@ class ExperimentHandle:
 		if machine is None:
 			machine = QuAM("quam_state.json")
 
-		machine.flux_lines[flux_index].dc_voltage = dc_value
+		machine.flux_lines[flux_index].dc_voltage = dc_value + 0E1
 		# connect to server
 		client = Labber.connectToServer('localhost')  # get list of instruments
 		QDevil = client.connectToInstrument('QDevil QDAC', dict(interface='Serial', address='3'))

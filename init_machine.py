@@ -11,9 +11,9 @@ resonators_connectivity = [(1, 2, "con1")]
 resonators_frequencies = [(7.130e9, 7.180e9), (6.999e9, 7.049e9), (6.875e9, 6.925e9),(6.217e9,6.267e9),(6.112e9,6.162e9),(6.018e9,6.068e9)]
 flux_lines_name = ["flux" + str(i) for i in range(1, 7)]
 flux_lines_connectivity = [(8, "con1"),(9, "con1"),(10, "con1"),(7, "con1"),(8, "con1"),(9, "con1")]
-ROI = [38,38,36,40,42,40]
+ROI = [38.0,38.0,36.0,40.0,42.0,40.0]
 TWPA_freq = [6324E6,6324E6,6324E6,6730.6E6,6730.6E6,6730.6E6]
-TWPA_pwr = [-10,-10,-10,-11.3,-11.3,-11.3]
+TWPA_pwr = [-10.0,-10.0,-10.0,-11.3,-11.3,-11.3]
 
 for i in range(6):
     machine.qubits.append(
@@ -38,7 +38,7 @@ for i in range(6):
             },
             "T1": 1230,
             "T2": 123,
-            "tuning_curve": [0,0,0],
+            "tuning_curve": [0.0,0.0,0.0],
         }
     )
 
@@ -58,7 +58,7 @@ for i in range(6):
                 "port": flux_lines_connectivity[i][0],
                 "filter": {"iir_taps": [], "fir_taps": []},
             },
-            "dc_voltage": 0,
+            "dc_voltage": 0.0,
         },
     )
 for i in range(6):
@@ -82,7 +82,7 @@ for i in range(6):
             },
             "RO_attenuation": [ROI[i], 10],
             "TWPA": [TWPA_freq[i], TWPA_pwr[i]],
-            "tuning_curve": [0, 0, 0, 0, 0, 0],
+            "tuning_curve": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         }
     )
 machine._save("quam_state.json", flat_data=False)

@@ -183,6 +183,50 @@ class AH_exp2D:
 
 		return poly_param
 
+	def qubit_vs_fast_flux(self, qubit_freq_sweep, ff_sweep, sig_amp, fit_order = 4, plot_flag = True):
+		"""
+		Use 4th order polynomial to fit to the qubit vs fast_flux tuning curve
+		input in Hz, fitted parameters in MHz
+		sig at each fast flux value will be fitted to a gaussian first, then polynomial fit those qubit freq to the qubit tuning curve
+		generates the negative part, so that fit will be symmetric
+		Args:
+			qubit_freq_sweep: 1D array, need to be shaped to 2D, according to np.size(dc_flux_sweep)
+			ff_sweep: 1D array of the fast flux swept values (absolute values! multiplied by machine.flux_lines[flux_index].flux_pulse_amp)
+			sig_amp: 1D array of amplitude, same shape as qubit_freq_sweep, need to be shaped to 2D
+		Return:
+			poly_param: the fitted polynomial parameters. Temporarily saved in AH_exp2D.poly_param.
+				should save to Analysis.poly_param, and machine.qubits[qubit_index].tuning_curve for long-term storage.
+		"""
+
+		# reshape qubit_freq_sweep, sig_amp to 2D arrays
+		qubit_freq_sweep_plt = qubit_freq_sweep.reshape(np.size(ff_sweep),
+														np.size(qubit_freq_sweep) // np.size(ff_sweep))
+		sig_amp_plt = sig_amp.reshape(np.size(ff_sweep),
+												  np.size(sig_amp) // np.size(ff_sweep))
+		# extract qubit freq at each dc flux value
+		qubit_freq = []
+		for n_index, _ in enumerate(ff_sweep):
+			qubit_freq_tmp = self.exp1D.peak_fit(x=qubit_freq_sweep_plt[n_index,:], y=sig_amp_plt[n_index,:], method="gaussian", plot_flag = False)
+			qubit_freq.append(qubit_freq_tmp / 1E6) # to MHz
+		qubit_freq = np.array(qubit_freq)
+		# symmetrize it
+		ff_index = ff_sweep > 0.0
+		qubit_freq_plt = np.concatenate((qubit_freq, qubit_freq[ff_index]))
+		ff_sweep_plt = np.concatenate((ff_sweep, -ff_sweep[ff_index]))
+		ff_index = np.argsort(ff_sweep_plt)
+		ff_sweep_plt = ff_sweep_plt[ff_index]
+		qubit_freq_plt = qubit_freq_plt[ff_index]
+		# fit and plot
+		poly_param = np.polyfit(ff_sweep_plt, qubit_freq_plt, deg=fit_order)
+		self.poly_param = poly_param
+		if plot_flag == True:
+			fig = plt.figure()
+			plt.rcParams['figure.figsize'] = [8, 4]
+			plt.plot(ff_sweep_plt, qubit_freq_plt, 'o')
+			plt.plot(ff_sweep_plt, np.polyval(poly_param, ff_sweep_plt))
+
+		return poly_param
+
 	def ham(self, dc_flux, wr, Ec, Ej, c, phi0, g, output_flag = 1):
 		"""
 		The Jaynes-Cummings Hamiltonian, all in units of MHz

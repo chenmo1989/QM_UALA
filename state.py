@@ -26,7 +26,7 @@ state = {
             },
             "T1": 1230,
             "T2": 123,
-            "tuning_curve": [0,0,0],
+            "tuning_curve": [0.0,0.0,0.0],
         },
     ],
     "flux_lines": [
@@ -45,7 +45,7 @@ state = {
                 "port": 7,
                 "filter": {"iir_taps": [], "fir_taps": []},
             },
-            "dc_voltage": 0,
+            "dc_voltage": 0.0,
         },
     ],
     "resonators": [
@@ -66,9 +66,9 @@ state = {
                 "I": 1,
                 "Q": 2,
             },
-            "RO_attenuation": [32, 10],
-            "TWPA": [6324E6,-10],
-            "tuning_curve": [0, 0, 0, 0, 0, 0],
+            "RO_attenuation": [32.0, 10.0],
+            "TWPA": [6324E6,-10.0],
+            "tuning_curve": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         },
     ],
     "global_parameters": {

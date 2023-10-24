@@ -15,7 +15,7 @@
       "pi_amp": [0.25],
       "T1": 1230,
       "T2": 123,
-      "tuning_curve": [0,0,0],
+      "tuning_curve": [0.0,0.0,0.0],
       "wiring": {
         "controller": "con1",
         "I": 3,
@@ -28,7 +28,7 @@
       "flux_pulse_amp": 0.25,
       "max_frequency_point": 0.0,
       "Z_delay": 19,
-      "dc_voltage": 0,
+      "dc_voltage": 0.0,
       "iswap": {
         "length": [],
         "level": []
@@ -54,9 +54,9 @@
       "readout_pulse_amp": 0.125,
       "rotation_angle": 0.0,
       "ge_threshold": 0.0,
-      "RO_attenuation": [32,10],
-      "TWPA": [6324000000.0,-10],
-      "tuning_curve": [0,0,0,0,0,0],
+      "RO_attenuation": [32.0,10.0],
+      "TWPA": [6324000000.0,-10.0],
+      "tuning_curve": [0.0,0.0,0.0,0.0,0.0,0.0],
       "wiring": {
         "controller": "con1",
         "I": 1,

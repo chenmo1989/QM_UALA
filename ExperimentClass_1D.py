@@ -164,7 +164,7 @@ class EH_RR: # sub
 		config = build_config(machine)
 		res_lo = machine.resonators[res_index].lo
 		res_if_sweep = res_freq_sweep - res_lo
-		res_if_sweep = res_if_sweep.astype(int)
+		res_if_sweep = np.round(res_if_sweep)
 
 		if np.max(abs(res_if_sweep)) > 400E6: # check if parameters are within hardware limit
 			print("res if range > 400MHz")
@@ -243,7 +243,6 @@ class EH_RR: # sub
 
 			return machine, res_freq_sweep, sig_amp
 
-
 class EH_Rabi:
 	"""
 	class in ExperimentHandle, for Rabi sequence related 1D experiments
@@ -287,7 +286,7 @@ class EH_Rabi:
 		config = build_config(machine)
 		qubit_lo = machine.qubits[qubit_index].lo
 		qubit_if_sweep = qubit_freq_sweep - qubit_lo
-		qubit_if_sweep = qubit_if_sweep.astype(int)
+		qubit_if_sweep = np.round(qubit_if_sweep)
 		ff_duration = machine.qubits[qubit_index].pi_length[0] + 40
 
 		if np.max(abs(qubit_if_sweep)) > 400E6: # check if parameters are within hardware limit
@@ -483,6 +482,114 @@ class EH_Rabi:
 			machine._save(os.path.join(tPath, json_name), flat_data=False)
 
 			return machine, rabi_duration_sweep, sig_amp
+
+	def rabi_amp(self, rabi_amp_sweep_rel, qubit_index, res_index, flux_index, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True):
+		"""
+		qubit rabi experiment in 1D (sweeps amplitude of rabi pulse)
+		note that the input argument is in relative amplitude, the return argument is in absolute amplitude
+		:param rabi_amp_sweep: relative amplitude, based on pi_amp[0]
+		:param qubit_index:
+		:param res_index:
+		:param flux_index:
+		:param n_avg:
+		:param cd_time:
+		:param tPath:
+		:param f_str_datetime:
+		:param simulate_flag:
+		:param simulation_len:
+		:param plot_flag:
+		Return:
+			machine
+			rabi_amp_sweep_abs
+			sig_amp
+		"""
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		machine = QuAM("quam_state.json")
+		config = build_config(machine)
+
+		if max(abs(rabi_amp_sweep_rel)) > 2:
+			print("some relative amps > 2, removed from experiment run")
+			rabi_amp_sweep_rel = rabi_amp_sweep_rel[abs(rabi_amp_sweep_rel) < 2]
+		rabi_amp_sweep_abs = rabi_amp_sweep_rel * machine.qubits[qubit_index].pi_amp[0] # actual rabi amplitude
+
+		with program() as power_rabi:
+			[I, Q, n, I_st, Q_st, n_st] = declare_vars()
+			a = declare(fixed)
+
+			with for_(n, 0, n < n_avg, n + 1):
+				with for_(*from_array(a, rabi_amp_sweep_rel)):
+					play("pi" * amp(a), machine.qubits[qubit_index].name)
+					align(machine.qubits[qubit_index].name, machine.resonators[res_index].name)
+					readout_avg_macro(machine.resonators[res_index].name,I,Q)
+					save(I, I_st)
+					save(Q, Q_st)
+					wait(cd_time * u.ns, machine.resonators[qubit_index].name)
+				save(n, n_st)
+
+			with stream_processing():
+				I_st.buffer(len(rabi_amp_sweep_rel)).average().save("I")
+				Q_st.buffer(len(rabi_amp_sweep_rel)).average().save("Q")
+				n_st.save("iteration")
+
+		#  Open Communication with the QOP  #
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+
+		if simulate_flag:
+			simulation_config = SimulationConfig(duration=1000)  # in clock cycles
+			job = qmm.simulate(config, power_rabi, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			qm = qmm.open_qm(config)
+			job = qm.execute(power_rabi)
+			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+
+			# Live plotting
+			if plot_flag == True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+
+			while results.is_processing():
+				# Fetch results
+				I, Q, iteration = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[qubit_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[qubit_index].readout_pulse_length)
+				sig_amp = np.sqrt(I ** 2 + Q ** 2)
+				sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+				# Progress bar
+				progress_counter(iteration, n_avg, start_time=results.get_start_time())
+				if plot_flag == True:
+					plt.cla()
+					plt.title("Power Rabi")
+					plt.plot(rabi_amp_sweep_abs, sig_amp, "b.")
+					plt.xlabel("rabi amplitude [V]")
+					plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
+					plt.pause(0.01)
+
+			# fetch all data after live-updating
+			I, Q, iteration = results.fetch_all()
+			# Convert I & Q to Volts
+			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+			sig_amp = np.sqrt(I ** 2 + Q ** 2)
+			# detrend removes the linear increase of phase
+			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+
+			# save data
+			exp_name = 'Q_power_rabi'
+			qubit_name = 'Q' + str(qubit_index + 1)
+			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+			file_name = f_str + '.mat'
+			json_name = f_str + '_state.json'
+			savemat(os.path.join(tPath, file_name),
+					{"Q_rabi_amplitude": rabi_amp_sweep_abs, "sig_amp": sig_amp, "sig_phase": sig_phase})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+			return machine, rabi_amp_sweep_abs, sig_amp
 
 
 	def rabi_amplitude(self):

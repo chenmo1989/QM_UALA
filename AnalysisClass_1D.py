@@ -185,12 +185,13 @@ class AH_exp1D:
 
 		return popt[1]
 
-	def rabi_length(self, x, y, plot_flag = True):
+	def rabi_length(self, x, y, method = "time_rabi", plot_flag = True):
 		"""
 		this function fits a single oscillatory curve to a cosine, typically used for a rabi oscillation
 		note x is in units of clock cycle! There is a factor of 4 in the plots and the output!
 		:param x: x data
 		:param y: y data
+		:param method: "time_rabi" (default), finds the pi pulse lengths, in ns; "power_rabi", finds the amp for pi pulse
 		:param plot_flag:
 		Return:
 			fitted pi pulse length
@@ -219,15 +220,28 @@ class AH_exp1D:
 			fig = plt.figure()
 			plt.rcParams['figure.figsize'] = [8, 4]
 			plt.cla()
-			plt.plot(x * 4,y,'.') # in ns
-			plt.plot(x * 4,__fit_fun(x,popt[0],popt[1],popt[2],popt[3]),'r')
 
-			plt.title("qubit rabi")
-			plt.xlabel("tau [ns]")
-			plt.ylabel("Signal [V]")
-			print(f"rabi_pi_pulse: {np.round((1/2-popt[3]/np.pi)/(popt[0])*4):.1f} ns")
-
-		return np.round((1/2-popt[3]/np.pi)/(popt[0])*4)
+			if method == "time_rabi":
+				plt.plot(x * 4,y,'.') # in ns
+				plt.plot(x * 4,__fit_fun(x,popt[0],popt[1],popt[2],popt[3]),'r')
+				plt.title("qubit rabi")
+				plt.xlabel("tau [ns]")
+				plt.ylabel("Signal [V]")
+			elif method == "power_rabi":
+				plt.plot(x, y, '.')  # in V
+				plt.plot(x, __fit_fun(x, popt[0], popt[1], popt[2], popt[3]), 'r')
+				plt.title("qubit rabi")
+				plt.xlabel("rabi amplitude [V]")
+				plt.ylabel("Signal [V]")
+		x * 2 * np.pi * c0 + c3
+		if method == "time_rabi":
+			print(f"rabi_pi_pulse: {np.round((1 / 2 - popt[3] / np.pi) / (popt[0]) * 4):.1f} ns")
+			print(f"half period: {np.round(1 / 2 / popt[0] * 4):.2f} ns")
+			return np.round((1/2-popt[3]/np.pi)/(popt[0])*4)
+		elif method == "power_rabi":
+			print(f"rabi_pi_pulse_amp: {(1 / 2 - popt[3] / np.pi) / popt[0]:.5f} V")
+			print(f"half period: {1 / 2 / popt[0]:.5f} V")
+			return np.round((1 / 2 - popt[3] / np.pi) / popt[0],decimals = 5)
 
 	def next_power_of_2(self,x):
 		return 0 if x == 0 else math.ceil(math.log2(x))

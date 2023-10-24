@@ -97,7 +97,7 @@ class Flux_line(QuamComponent):
     flux_pulse_amp: float
     max_frequency_point: float
     Z_delay: int
-    dc_voltage: int
+    dc_voltage: float
     iswap: Iswap
     wiring: Wiring2
     
