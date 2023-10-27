@@ -689,7 +689,31 @@ class EH_Rabi:
 
 	def qubit_freq_fast_flux_subroutine(self, ff_sweep_rel, qubit_freq_est_sweep, qubit_if_sweep, qubit_index, res_index, flux_index,
 										pi_amp_rel = 1.0, n_avg = 1E3, cd_time = 10E3, machine = None, simulate_flag = False, simulation_len = 1000, fig = None):
+		"""
+		subroutine for 2D qubit freq spectroscopy vs fast flux
+		input should have been checked: no need to change LO.
+		Args:
+			ff_sweep_rel (): relative voltage value of fast flux sweep. absolute value is ff_sweep_rel * machine.flux_lines[flux_index].flux_pulse_amp
+			qubit_freq_est_sweep (): estimated qubit frequencies to be swept. Each freq correspond to a fast flux value above.
+			qubit_if_sweep (): sweep range around the estimated qubit frequency
+			qubit_index ():
+			res_index ():
+			flux_index ():
+			pi_amp_rel (): 1.0 (default). Relative knob to tune the pi pulse amplitude
+			n_avg ():
+			cd_time ():
+			machine ():
+			simulate_flag ():
+			simulation_len ():
+			fig (): None (default). If a fig is given, it gives us the ability to interrupt the experimental run.
 
+		Returns:
+			machine
+			qubit_freq_sweep_tot
+			I_tot
+			Q_tot
+			ff_sweep_rel * machine.flux_lines[flux_index].flux_pulse_amp
+		"""
 		if machine is None:
 			machine = QuAM("quam_state.json")
 		config = build_config(machine)
@@ -697,6 +721,11 @@ class EH_Rabi:
 		qubit_lo = machine.qubits[qubit_index].lo
 		qubit_if_est_sweep = np.round(qubit_freq_est_sweep - qubit_lo)
 		qubit_if_est_sweep = qubit_if_est_sweep.astype(int)
+
+		if max(abs(qubit_if_est_sweep)) + max(qubit_if_sweep) > 400E6:
+			print("max IF freq > 400 MHz, abort. Check the input!")
+			return None
+
 		ff_duration = machine.qubits[qubit_index].pi_length[0] + 40
 
 		# construct qubit freq_sweep_tot
@@ -770,7 +799,33 @@ class EH_Rabi:
 
 	def qubit_freq_vs_fast_flux(self, qubit_freq_sweep, qubit_if_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, pi_amp_rel = 1.0,
 					  poly_param = None, tPath=None, f_str_datetime=None, simulate_flag=False, simulation_len=1000, plot_flag=True):
+		"""
+		2D qubit spectroscopy experiment vs fast flux
+		with a good tuning curve, this method is used to run fine scans of the qubit spectroscopy, for identification of avoided crossings
+		consists of block-wise 2D scans using the qubit_freq_fast_flux_subroutine. Each block consists of 4 calls to the subroutine, with 2 LO frequencies.
 
+		Args:
+			qubit_freq_sweep (): desired qubit frequency sweep range for the 2D scan. The corresponding fast flux value will be calculated based on a 4th order polynomial tuning curve.
+			qubit_if_sweep (): sweep range around the estimated qubit frequency
+			qubit_index ():
+			res_index ():
+			flux_index ():
+			n_avg ():
+			cd_time ():
+			pi_amp_rel (): 1.0 (default). Relative knob to tune the pi pulse amplitude
+			poly_param (): None (default). qubit freq. tuning curve. Must be 4th order polynomial!
+			tPath ():
+			f_str_datetime ():
+			simulate_flag ():
+			simulation_len ():
+			plot_flag ():
+
+		Returns:
+			machine
+			qubit_freq_sweep
+			ff_sweep_abs
+			sig_amp_qubit
+		"""
 		if tPath is None:
 			tPath = self.update_tPath()
 		if f_str_datetime is None:
@@ -783,6 +838,9 @@ class EH_Rabi:
 		if poly_param is None:
 			poly_param = np.array(machine.qubits[qubit_index].tuning_curve[:])
 
+		# sort qubit_freq_sweep from small to large, for later use of searchsorted
+		qubit_freq_sweep = np.sort(np.floor(qubit_freq_sweep)) # floor, to avoid larger than max freq situation
+
 		# find the corresponding fast flux values for qubit_freq_sweep
 		ff_sweep_abs = []
 		for freq_tmp in qubit_freq_sweep:
@@ -791,8 +849,10 @@ class EH_Rabi:
 			ff_sweep_abs.append(sol_tmp)
 		ff_sweep_abs = np.array(ff_sweep_abs)
 		if max(abs(ff_sweep_abs)) > 0.5:
-			print("some fast flux > 0.5V, removed from experiment run")
+			print("-------------------------------------some fast flux > 0.5V, removed from experiment run")
+			qubit_freq_sweep = qubit_freq_sweep[abs(ff_sweep_abs) < 0.5]
 			ff_sweep_abs = ff_sweep_abs[abs(ff_sweep_abs) < 0.5]
+
 		ff_sweep_rel = ff_sweep_abs / machine.flux_lines[flux_index].flux_pulse_amp
 
 		if plot_flag == True:
@@ -809,45 +869,56 @@ class EH_Rabi:
 
 		# divide and conquer!
 		# use +- (100 - 300) MHz IF freq range
-		# each period is 800 MHz, with two LOs
+		# each period is 800 MHz, with two LOs, separated by 200 MHz
 		qubit_freq_sweep_head = max(qubit_freq_sweep) # the start of the current analysis
-		while qubit_freq_sweep_head - min(qubit_freq_sweep) > 600E6: # full period (with 2x LOs). For > 600 rather than > 800 to include the last period, if it also requires 4 segments
+		while qubit_freq_sweep_head + 1 > min(qubit_freq_sweep): # full period (with 2x LOs).
 			# find the index of frequencies in qubit_freq_sweep for this sweep, with IF freq > 0
 			# LO1
-			freq_seg_index_pos_IF_LO1 = [np.argmax(qubit_freq_sweep - 1 < qubit_freq_sweep_head), np.argmin(
-				qubit_freq_sweep) > qubit_freq_sweep_head - 200E6] # -1 s.t. head will be included. sweep range is IF = [300, 100) MHz
-			freq_seg_index_neg_IF_LO1 = [np.argmax(qubit_freq_sweep - 1 < qubit_freq_sweep_head - 400E6), np.argmin(
-				qubit_freq_sweep) > qubit_freq_sweep_head - 600E6] # -1 s.t. head will be included. sweep range is IF = [-100, -300) MHz
+			freq_seg_index_pos_IF_LO1 = [np.searchsorted(qubit_freq_sweep, qubit_freq_sweep_head - 200E6, side='right'),
+										 np.searchsorted(
+											 qubit_freq_sweep, qubit_freq_sweep_head,
+											 side='right')]  # -1 s.t. head will be included. sweep range is IF = (100, 300] MHz
+			freq_seg_index_neg_IF_LO1 = [np.searchsorted(qubit_freq_sweep, qubit_freq_sweep_head - 600E6, side='right'),
+										 np.searchsorted(
+											 qubit_freq_sweep, qubit_freq_sweep_head - 400E6,
+											 side='right')]  # -1 s.t. head will be included. sweep range is IF = (-300, -100] MHz
 			# LO2
-			freq_seg_index_pos_IF_LO2 = [np.argmax(qubit_freq_sweep - 1 < qubit_freq_sweep_head - 200E6), np.argmin(
-				qubit_freq_sweep) > qubit_freq_sweep_head - 400E6]  # -1 s.t. head will be included. sweep range is IF = [300, 100) MHz
-			freq_seg_index_neg_IF_LO2 = [np.argmax(qubit_freq_sweep - 1 < qubit_freq_sweep_head - 600E6), np.argmin(
-				qubit_freq_sweep) > qubit_freq_sweep_head - 800E6]  # -1 s.t. head will be included. sweep range is IF = [-100, -300) MHz
+			freq_seg_index_pos_IF_LO2 = [np.searchsorted(qubit_freq_sweep, qubit_freq_sweep_head - 400E6, side='right'),
+										 np.searchsorted(
+											 qubit_freq_sweep, qubit_freq_sweep_head - 200E6,
+											 side='right')]  # -1 s.t. head will be included. sweep range is IF = (100, 300] MHz
+			freq_seg_index_neg_IF_LO2 = [np.searchsorted(qubit_freq_sweep, qubit_freq_sweep_head - 800E6, side='right'),
+										 np.searchsorted(
+											 qubit_freq_sweep, qubit_freq_sweep_head - 600E6,
+											 side='right')]  # -1 s.t. head will be included. sweep range is IF = (-300, -100] MHz
 
 			# LO1
 			qubit_lo = qubit_freq_sweep_head - 300E6
 			machine.qubits[qubit_index].lo = int(qubit_lo.tolist()) + 0E6
-			machine.qubits[qubit_index].f_01 = machine.qubits[qubit_index].lo + 200E6  # calibrate in the center of the +ive sweep range
+			machine.qubits[qubit_index].f_01 = int(qubit_lo.tolist()) + 200E6  # calibrate in the center of the +ive sweep range
 			self.octave_calibration(qubit_index, res_index, flux_index, machine=machine)
 			# qubit freq vs fast flux, sweep over +ive and -ive IF freq
 			for freq_seg_index in [freq_seg_index_pos_IF_LO1,freq_seg_index_neg_IF_LO1]:
 				ff_sweep_rel_seg = ff_sweep_rel[freq_seg_index[0]:freq_seg_index[1]]
 				qubit_freq_sweep_seg = qubit_freq_sweep[freq_seg_index[0]:freq_seg_index[1]]
 
-				if plot_flag == True:
-					machine, qubit_freq_sweep_tmp, I_tmp, Q_tmp, ff_sweep_tmp = self.qubit_freq_fast_flux_subroutine(
-						ff_sweep_rel_seg, qubit_freq_sweep_seg, qubit_if_sweep,
-						qubit_index, res_index, flux_index, pi_amp_rel=pi_amp_rel, n_avg=n_avg, cd_time=cd_time, machine=machine,
-						fig=fig)
-				else:
-					machine, qubit_freq_sweep_tmp, I_tmp, Q_tmp, ff_sweep_tmp = self.qubit_freq_fast_flux_subroutine(
-						ff_sweep_rel_seg, qubit_freq_sweep_seg, qubit_if_sweep,
-						qubit_index, res_index, flux_index, pi_amp_rel=pi_amp_rel, n_avg=n_avg, cd_time=cd_time, machine=machine)
+				if len(ff_sweep_rel_seg) > 0: # still need to sweep
+					if plot_flag == True:
+						machine, qubit_freq_sweep_tmp, I_tmp, Q_tmp, ff_sweep_tmp = self.qubit_freq_fast_flux_subroutine(
+							ff_sweep_rel_seg, qubit_freq_sweep_seg, qubit_if_sweep,
+							qubit_index, res_index, flux_index, pi_amp_rel=pi_amp_rel, n_avg=n_avg, cd_time=cd_time, machine=machine,
+							fig=fig)
+					else:
+						machine, qubit_freq_sweep_tmp, I_tmp, Q_tmp, ff_sweep_tmp = self.qubit_freq_fast_flux_subroutine(
+							ff_sweep_rel_seg, qubit_freq_sweep_seg, qubit_if_sweep,
+							qubit_index, res_index, flux_index, pi_amp_rel=pi_amp_rel, n_avg=n_avg, cd_time=cd_time, machine=machine)
 
-				I_tot.append(I_tmp)
-				Q_tot.append(Q_tmp)
-				qubit_freq_sweep_tot.append(qubit_freq_sweep_tmp)
-				ff_sweep_tot.append(ff_sweep_tmp)
+					I_tot.append(I_tmp)
+					Q_tot.append(Q_tmp)
+					qubit_freq_sweep_tot.append(qubit_freq_sweep_tmp)
+					ff_sweep_tot.append(ff_sweep_tmp)
+				else: # no need to scan. For the last period
+					pass
 
 			# LO2
 			qubit_lo = qubit_freq_sweep_head - 500E6
@@ -860,38 +931,28 @@ class EH_Rabi:
 				ff_sweep_rel_seg = ff_sweep_rel[freq_seg_index[0]:freq_seg_index[1]]
 				qubit_freq_sweep_seg = qubit_freq_sweep[freq_seg_index[0]:freq_seg_index[1]]
 
-				if plot_flag == True:
-					machine, qubit_freq_sweep_tmp, I_tmp, Q_tmp, ff_sweep_tmp = self.qubit_freq_fast_flux_subroutine(
-						ff_sweep_rel_seg, qubit_freq_sweep_seg, qubit_if_sweep,
-						qubit_index, res_index, flux_index, pi_amp_rel=pi_amp_rel, n_avg=n_avg, cd_time=cd_time,
-						machine=machine,
-						fig=fig)
-				else:
-					machine, qubit_freq_sweep_tmp, I_tmp, Q_tmp, ff_sweep_tmp = self.qubit_freq_fast_flux_subroutine(
-						ff_sweep_rel_seg, qubit_freq_sweep_seg, qubit_if_sweep,
-						qubit_index, res_index, flux_index, pi_amp_rel=pi_amp_rel, n_avg=n_avg, cd_time=cd_time,
-						machine=machine)
+				if len(ff_sweep_rel_seg) > 0:  # still need to sweep
+					if plot_flag == True:
+						machine, qubit_freq_sweep_tmp, I_tmp, Q_tmp, ff_sweep_tmp = self.qubit_freq_fast_flux_subroutine(
+							ff_sweep_rel_seg, qubit_freq_sweep_seg, qubit_if_sweep,
+							qubit_index, res_index, flux_index, pi_amp_rel=pi_amp_rel, n_avg=n_avg, cd_time=cd_time,
+							machine=machine,
+							fig=fig)
+					else:
+						machine, qubit_freq_sweep_tmp, I_tmp, Q_tmp, ff_sweep_tmp = self.qubit_freq_fast_flux_subroutine(
+							ff_sweep_rel_seg, qubit_freq_sweep_seg, qubit_if_sweep,
+							qubit_index, res_index, flux_index, pi_amp_rel=pi_amp_rel, n_avg=n_avg, cd_time=cd_time,
+							machine=machine)
 
-				I_tot.append(I_tmp)
-				Q_tot.append(Q_tmp)
-				qubit_freq_sweep_tot.append(qubit_freq_sweep_tmp)
-				ff_sweep_tot.append(ff_sweep_tmp)
+					I_tot.append(I_tmp)
+					Q_tot.append(Q_tmp)
+					qubit_freq_sweep_tot.append(qubit_freq_sweep_tmp)
+					ff_sweep_tot.append(ff_sweep_tmp)
+				else: # no need to scan. For the last period
+					pass
 
 			qubit_freq_sweep_head -= 800E6 # move to the next full period
 
-		# deal with the remaining qubit freq to sweep (< 600 MHz, 0-3 IF segments by construction)
-		if qubit_freq_sweep_head - min(qubit_freq_sweep) > 400E6: # requires 3 segments
-			# almost the same, with 1 seg for LO2
-		elif qubit_freq_sweep_head - min(qubit_freq_sweep) > 200E6: # requires 2 segments
-			# 1 seg for both LOs
-		elif qubit_freq_sweep_head - min(qubit_freq_sweep) > 0: # requires 1 segment.
-			# 1 seg for LO1
-		else: # full segment, already taken care of in the full period construction. put here explictly for completeness.
-			pass
-
-		# may want to add the sort here.
-		#######################################
-		
 		# save
 		I_qubit = np.concatenate(I_tot)
 		Q_qubit = np.concatenate(Q_tot)
@@ -900,6 +961,19 @@ class EH_Rabi:
 		sigs_qubit = I_qubit + 1j * Q_qubit
 		sig_amp_qubit = np.abs(sigs_qubit)  # Amplitude
 		sig_phase_qubit = np.angle(sigs_qubit)  # Phase
+
+		# sort according to fast flux sweep
+		qubit_freq_sweep = qubit_freq_sweep.reshape(np.size(ff_sweep_abs),
+														np.size(qubit_freq_sweep) // np.size(ff_sweep_abs))
+		sig_amp_qubit = sig_amp_qubit.reshape(np.size(ff_sweep_abs),
+												  np.size(sig_amp_qubit) // np.size(ff_sweep_abs))
+
+		sort_index = np.argsort(ff_sweep_abs)
+		qubit_freq_sweep = qubit_freq_sweep[sort_index,:]
+		sig_amp_qubit = sig_amp_qubit[sort_index,:]
+		ff_sweep_abs = ff_sweep_abs[sort_index]
+		_, ff_sweep_plt = np.meshgrid(qubit_freq_sweep[0, :], ff_sweep_abs)
+
 		# save data
 		exp_name = 'qubit_freq_vs_fast_flux'
 		qubit_name = 'Q' + str(qubit_index + 1)
@@ -911,12 +985,7 @@ class EH_Rabi:
 				 "Q_freq": qubit_freq_sweep, "sig_amp_qubit": sig_amp_qubit, "sig_phase_qubit": sig_phase_qubit})
 
 		# plot
-		qubit_freq_sweep_plt = qubit_freq_sweep.reshape(np.size(ff_sweep_abs),
-														np.size(qubit_freq_sweep) // np.size(ff_sweep_abs))
-		sig_amp_qubit_plt = sig_amp_qubit.reshape(np.size(ff_sweep_abs),
-												  np.size(sig_amp_qubit) // np.size(ff_sweep_abs))
-		_, ff_sweep_plt = np.meshgrid(qubit_freq_sweep_plt[0, :], ff_sweep_abs)
-		plt.pcolormesh(ff_sweep_plt, qubit_freq_sweep_plt / u.MHz, sig_amp_qubit_plt, cmap="seismic")
+		plt.pcolormesh(ff_sweep_plt, qubit_freq_sweep / u.MHz, sig_amp_qubit, cmap="seismic")
 		plt.title("Qubit tuning curve")
 		plt.xlabel("fast flux level [V]")
 		plt.ylabel("Frequency [MHz]")
