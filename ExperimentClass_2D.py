@@ -753,7 +753,7 @@ class EH_Rabi:
 			while results.is_processing():
 				time.sleep(0.1)
 				# Fetch results
-				# I, Q, iteration = results.fetch_all()
+				I, Q, iteration = results.fetch_all()
 				# I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 				# Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 				# progress bar
@@ -809,7 +809,7 @@ class EH_Rabi:
 		start_time = time.time()
 
 		for freq_seg_index, freq_est_value in enumerate(freq_est_seg_index[1:]):
-			print(f"seg {freq_seg_index:.0f} / {freq_est_seg_index[-1]:.0f} ...")
+			print(f"seg {freq_est_seg_index[freq_seg_index]:.0f} / {freq_est_seg_index[-1]:.0f} ...")
 			index_seg_lower = freq_est_seg_index[freq_seg_index]
 			index_seg_upper = freq_est_value
 
