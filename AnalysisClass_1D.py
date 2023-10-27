@@ -189,7 +189,7 @@ class AH_exp1D:
 		"""
 		this function fits a single oscillatory curve to a cosine, typically used for a rabi oscillation
 		note x is in units of clock cycle! There is a factor of 4 in the plots and the output!
-		:param x: x data
+		:param x: x data--for time_rabi, it is ns not clock cycle!
 		:param y: y data
 		:param method: "time_rabi" (default), finds the pi pulse lengths, in ns; "power_rabi", finds the amp for pi pulse
 		:param plot_flag:
@@ -209,9 +209,9 @@ class AH_exp1D:
 		index = np.argmax(DataY)
 		amp = abs(max(y) - min(y)) / 2
 		rabi = Freq[index]
-		init_guess = [rabi, amp, np.mean(y), 0]
-		LB = [0.5 * rabi, -2*amp, -1, -6]
-		UB = [2 * rabi, 2*amp, 1, 6]
+		init_guess = [rabi, amp, (max(y) + min(y))/2, -np.pi]
+		LB = [0.5 * rabi, 0.0, -1, -6]
+		UB = [2 * rabi, 5*amp, 1, 6]
 
 		popt, _ = curve_fit(lambda x, *guess: __fit_fun(x, *guess),
 							xdata=x, ydata=y, p0=init_guess, check_finite="true", bounds=(LB, UB))
@@ -222,8 +222,8 @@ class AH_exp1D:
 			plt.cla()
 
 			if method == "time_rabi":
-				plt.plot(x * 4,y,'.') # in ns
-				plt.plot(x * 4,__fit_fun(x,popt[0],popt[1],popt[2],popt[3]),'r')
+				plt.plot(x, y,'.') # in ns
+				plt.plot(x, __fit_fun(x,popt[0],popt[1],popt[2],popt[3]),'r')
 				plt.title("qubit rabi")
 				plt.xlabel("tau [ns]")
 				plt.ylabel("Signal [V]")
@@ -233,15 +233,14 @@ class AH_exp1D:
 				plt.title("qubit rabi")
 				plt.xlabel("rabi amplitude [V]")
 				plt.ylabel("Signal [V]")
-		x * 2 * np.pi * c0 + c3
 		if method == "time_rabi":
-			print(f"rabi_pi_pulse: {np.round((1 / 2 - popt[3] / np.pi) / (popt[0]) * 4):.1f} ns")
-			print(f"half period: {np.round(1 / 2 / popt[0] * 4):.2f} ns")
-			return np.round((1/2-popt[3]/np.pi)/(popt[0])*4)
+			print(f"rabi_pi_pulse: {(-popt[3]) / popt[0] / 2 / np.pi:.1f} ns")
+			print(f"half period: {1 / 2 / popt[0]:.2f} ns")
+			return np.round((-popt[3]) / popt[0] / 2 / np.pi)
 		elif method == "power_rabi":
-			print(f"rabi_pi_pulse_amp: {(1 / 2 - popt[3] / np.pi) / popt[0]:.5f} V")
+			print(f"rabi_pi_pulse_amp: {(-popt[3]) / popt[0] / 2 / np.pi:.5f} V")
 			print(f"half period: {1 / 2 / popt[0]:.5f} V")
-			return np.round((1 / 2 - popt[3] / np.pi) / popt[0],decimals = 5)
+			return np.round((-popt[3]) / popt[0] / 2 / np.pi, decimals = 5)
 
 	def next_power_of_2(self,x):
 		return 0 if x == 0 else math.ceil(math.log2(x))

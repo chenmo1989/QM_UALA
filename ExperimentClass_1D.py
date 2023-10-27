@@ -392,7 +392,7 @@ class EH_Rabi:
 		:param plot_flag:
 		Return:
 			machine
-			rabi_duration_sweep
+			rabi_duration_sweep: in ns!
 			sig_amp
 		"""
 		if tPath is None:
@@ -478,10 +478,10 @@ class EH_Rabi:
 			file_name = f_str + '.mat'
 			json_name = f_str + '_state.json'
 			savemat(os.path.join(tPath, file_name),
-					{"Q_rabi_duration": rabi_duration_sweep, "sig_amp": sig_amp, "sig_phase": sig_phase})
+					{"Q_rabi_duration": rabi_duration_sweep * 4, "sig_amp": sig_amp, "sig_phase": sig_phase})
 			machine._save(os.path.join(tPath, json_name), flat_data=False)
 
-			return machine, rabi_duration_sweep, sig_amp
+			return machine, rabi_duration_sweep * 4, sig_amp
 
 	def rabi_amp(self, rabi_amp_sweep_rel, qubit_index, res_index, flux_index, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True):
 		"""
@@ -511,9 +511,9 @@ class EH_Rabi:
 		machine = QuAM("quam_state.json")
 		config = build_config(machine)
 
-		if max(abs(rabi_amp_sweep_rel)) > 2:
-			print("some relative amps > 2, removed from experiment run")
-			rabi_amp_sweep_rel = rabi_amp_sweep_rel[abs(rabi_amp_sweep_rel) < 2]
+		#if max(abs(rabi_amp_sweep_rel)) > 2:
+		#	print("some relative amps > 2, removed from experiment run")
+		#	rabi_amp_sweep_rel = rabi_amp_sweep_rel[abs(rabi_amp_sweep_rel) < 2]
 		rabi_amp_sweep_abs = rabi_amp_sweep_rel * machine.qubits[qubit_index].pi_amp[0] # actual rabi amplitude
 
 		with program() as power_rabi:

@@ -114,13 +114,14 @@ class ExperimentHandle:
 		client.close()
 		return machine
 
-	def octave_calibration(self,qubit_index,res_index,flux_index,machine = None):
+	def octave_calibration(self,qubit_index,res_index,flux_index,machine = None,log_flag = True):
 		"""
 		calibrates octave, using parameters saved in machine
 		:param qubit_index:
 		:param res_index:
 		:param flux_index:
 		:param machine: if not given, takes value saved in quam_state.json
+		:param log_flag: True (default), have warnings from QM; False: error log only
 		:return:
 		"""
 		if machine is None:
@@ -136,13 +137,17 @@ class ExperimentHandle:
 		#machine._save("quam_state.json", flat_data=False)
 
 		# Configure the Octave according to the elements settings and calibrate
-		qmm = QuantumMachinesManager(host = machine.network.qop_ip, port='9510', octave=octave_config, log_level = "ERROR")
-		config = build_config(machine)
+		if log_flag:
+			qmm = QuantumMachinesManager(host = machine.network.qop_ip, port='9510', octave=octave_config)
+			config = build_config(machine)
+		else:
+			qmm = QuantumMachinesManager(host=machine.network.qop_ip, port='9510', octave=octave_config, log_level = "ERROR")
+			config = build_config(machine)
+			print("Octave calibration starts...")
+			print(f"------------------------------------- Calibrates r{res_index:.0f} for (LO, IF) = ({machine.resonators[res_index].lo/1E9:.3f} GHz, {(machine.resonators[res_index].f_readout - machine.resonators[res_index].lo)/1E6: .3f} MHz)")
+			print(f"------------------------------------- Calibrates q{qubit_index:.0f} for (LO, IF) = ({machine.qubits[qubit_index].lo/1E9:.3f} GHz, {(machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].lo)/1E6: .3f} MHz)")
+			print("Octave calibration finished.")
 
-		print("Octave calibration starts...")
-		print(f"------------------------------------- Calibrates r{res_index:.0f} for (LO, IF) = ({machine.resonators[res_index].lo/1E9:.3f} GHz, {(machine.resonators[res_index].f_readout - machine.resonators[res_index].lo)/1E6: .3f} MHz)")
-		print(f"------------------------------------- Calibrates q{qubit_index:.0f} for (LO, IF) = ({machine.qubits[qubit_index].lo/1E9:.3f} GHz, {(machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].lo)/1E6: .3f} MHz)")
-		#print("Octave calibration finished.")
 		octave_settings(
 			qmm=qmm,
 			config=config,
