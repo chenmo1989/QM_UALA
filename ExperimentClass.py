@@ -98,6 +98,7 @@ class ExperimentHandle:
 		SG = client.connectToInstrument('Rohde&Schwarz RF Source', dict(interface='TCPIP', address='192.168.88.2'))
 		SG.setValue('Frequency', machine.resonators[res_index].TWPA[0])
 		SG.setValue('Power', machine.resonators[res_index].TWPA[1])
+		SG.setValue('Output', True)
 
 		client.close()
 
@@ -135,9 +136,13 @@ class ExperimentHandle:
 		machine._save("quam_state.json", flat_data=False)
 
 		# Configure the Octave according to the elements settings and calibrate
-		qmm = QuantumMachinesManager(host = machine.network.qop_ip, port='9510', octave=octave_config)
+		qmm = QuantumMachinesManager(host = machine.network.qop_ip, port='9510', octave=octave_config, log_level = "ERROR")
 		config = build_config(machine)
 
+		print("Octave calibration starts...")
+		print(f"------------------------------------- Calibrates r{res_index:.0f} for (LO, IF) = ({machine.resonators[res_index].lo/1E9:.3f} GHz, {(machine.resonators[res_index].f_readout - machine.resonators[res_index].lo)/1E6: .3f} MHz)")
+		print(f"------------------------------------- Calibrates q{qubit_index:.0f} for (LO, IF) = ({machine.qubits[qubit_index].lo/1E9:.3f} GHz, {(machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].lo)/1E6: .3f} MHz)")
+		#print("Octave calibration finished.")
 		octave_settings(
 			qmm=qmm,
 			config=config,

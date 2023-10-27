@@ -444,6 +444,7 @@ def build_config(quam: QuAM):
         },
         "digital_waveforms": {
             "ON": {"samples": [(1, 0)]},
+            "OFF": {"samples": [(0, 0)]},
         },
         "integration_weights": {
             **{

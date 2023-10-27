@@ -114,7 +114,7 @@ class AH_exp2D:
 
 		## plot data and fitting
 		plt.scatter(dc_flux_sweep.T, res_freq / u.MHz)
-		plt.plot(dc_flux_sweep.T, self.ham(dc_flux_sweep, *popt, 1))
+		plt.plot(dc_flux_sweep.T, self.ham(dc_flux_sweep, *ham_param, 1))
 		self.ham_param = ham_param
 
 		return ham_param

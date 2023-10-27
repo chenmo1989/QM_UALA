@@ -109,7 +109,7 @@ class EH_RR: # sub
 
 		if simulate_flag:
 			simulation_config = SimulationConfig(duration=simulation_len)
-			job = qmm.simulate(config, resonator_spec, simulation_config)
+			job = qmm.simulate(config, raw_trace_prog, simulation_config)
 			job.get_simulated_samples().con1.plot()
 		else:
 			qm = qmm.open_qm(config)

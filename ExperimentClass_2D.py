@@ -354,7 +354,7 @@ class EH_RR:
 
 			for m in range(len(dc_flux_sweep)):
 				# set QDAC voltage
-				dc_flux = dc_flux_sweep[m]
+				dc_flux = dc_flux_sweep[m].tolist()
 				QDevil.setValue("CH0" + str(flux_index+1) + " Voltage", dc_flux)
 				machine.flux_lines[flux_index].dc_voltage = dc_flux
 
@@ -695,6 +695,7 @@ class EH_Rabi:
 
 		qubit_lo = machine.qubits[qubit_index].lo
 		qubit_if_est_sweep = np.round(qubit_freq_est_sweep - qubit_lo)
+		qubit_if_est_sweep = qubit_if_est_sweep.astype(int)
 		ff_duration = machine.qubits[qubit_index].pi_length[0] + 40
 
 		# construct qubit freq_sweep_tot
@@ -756,7 +757,7 @@ class EH_Rabi:
 				# I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 				# Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 				# progress bar
-				# progress_counter(iteration, n_avg, start_time=results.get_start_time())
+				progress_counter(iteration, n_avg, start_time=results.get_start_time())
 
 			# fetch all data after live-updating
 			I, Q, iteration = results.fetch_all()
@@ -808,6 +809,7 @@ class EH_Rabi:
 		start_time = time.time()
 
 		for freq_seg_index, freq_est_value in enumerate(freq_est_seg_index[1:]):
+			print(f"seg {freq_seg_index:.0f} / {freq_est_seg_index[-1]:.0f} ...")
 			index_seg_lower = freq_est_seg_index[freq_seg_index]
 			index_seg_upper = freq_est_value
 
