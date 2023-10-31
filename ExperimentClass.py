@@ -114,7 +114,7 @@ class ExperimentHandle:
 		client.close()
 		return machine
 
-	def octave_calibration(self,qubit_index,res_index,flux_index,machine = None,log_flag = True):
+	def octave_calibration(self,qubit_index,res_index,flux_index,machine = None,log_flag = True,qubit_only = False):
 		"""
 		calibrates octave, using parameters saved in machine
 		:param qubit_index:
@@ -122,6 +122,7 @@ class ExperimentHandle:
 		:param flux_index:
 		:param machine: if not given, takes value saved in quam_state.json
 		:param log_flag: True (default), have warnings from QM; False: error log only
+		:param qubit_only: False (default). If true, only calibrate qubit, skip the resonator.
 		:return:
 		"""
 		if machine is None:
@@ -132,7 +133,10 @@ class ExperimentHandle:
 		# resonator_aux = ElementsSettings("resonator_aux", gain=0, rf_in_port=["octave1", 1], down_convert_LO_source="Internal")
 		qubit = ElementsSettings("q" + str(res_index), gain=0)
 		# Add the "octave" elements
-		elements_settings = [resonator, qubit]
+		if qubit_only:
+			elements_settings = [qubit]
+		else:
+			elements_settings = [resonator, qubit]
 
 		#machine._save("quam_state.json", flat_data=False)
 

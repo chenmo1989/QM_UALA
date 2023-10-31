@@ -130,7 +130,7 @@ class AH_exp1D:
 
 		plt.close('all')
 		# 1D spectroscopy plot
-		plt.figure(figsize=[8, 4])
+		plt.figure(figsize=[6, 3])
 		plt.title("Resonator spectroscopy")
 		plt.plot((res_freq_sweep) / u.MHz, sig_amp, ".")
 		plt.xlabel("Frequency [MHz]")
@@ -173,7 +173,7 @@ class AH_exp1D:
 
 		if plot_flag == True:
 			fig = plt.figure()
-			plt.rcParams['figure.figsize'] = [8, 4]
+			plt.rcParams['figure.figsize'] = [6, 3]
 			plt.cla()
 			plt.plot(x/u.MHz,y,'.')
 			plt.plot(x/u.MHz,__fit_fun(x,popt[0],popt[1],popt[2],popt[3]),'r')
@@ -218,7 +218,7 @@ class AH_exp1D:
 
 		if plot_flag == True:
 			fig = plt.figure()
-			plt.rcParams['figure.figsize'] = [8, 4]
+			plt.rcParams['figure.figsize'] = [6, 3]
 			plt.cla()
 
 			if method == "time_rabi":
@@ -241,6 +241,26 @@ class AH_exp1D:
 			print(f"rabi_pi_pulse_amp: {(-popt[3]) / popt[0] / 2 / np.pi:.5f} V")
 			print(f"half period: {1 / 2 / popt[0]:.5f} V")
 			return np.round((-popt[3]) / popt[0] / 2 / np.pi, decimals = 5)
+
+	def T1(self, tau_sweep, sig_amp, method = "exp", plot_flag = True):
+		if method == "exp":
+			def __fit_fun(t, A, T1, c):
+				return A * np.exp(-t / T1) + c
+
+		param, _ = curve_fit(__fit_fun, tau_sweep, sig_amp, p0=[max(sig_amp) - min(sig_amp), 4E3, min(sig_amp)])
+
+		if plot_flag == True:
+			fig = plt.figure()
+			plt.rcParams['figure.figsize'] = [6, 3]
+			plt.cla()
+			plt.plot(tau_sweep / u.us, sig_amp,'.')
+			plt.plot(tau_sweep / u.us, __fit_fun(tau_sweep,param[0],param[1],param[2]),'r')
+
+			plt.xlabel("tau [us]")
+			plt.ylabel("Signal [V]")
+			print('Qubit T1 [us]:', param[1] / u.us)
+
+		return param[1]
 
 	def next_power_of_2(self,x):
 		return 0 if x == 0 else math.ceil(math.log2(x))

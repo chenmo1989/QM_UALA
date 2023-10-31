@@ -5,7 +5,7 @@ written by Mo Chen in Oct. 2023
 """
 from qm.qua import *
 from qm.QuantumMachinesManager import QuantumMachinesManager
-from qm import SimulationConfig, LoopbackInterface
+from qm import SimulationConfig, LoopbackInterface, generate_qua_script
 from qm.octave import *
 from qm.octave.octave_manager import ClockMode
 from configuration import *
@@ -48,7 +48,7 @@ class EH_RR: # sub
 		self.update_tPath = ref_to_update_tPath
 		self.update_str_datetime = ref_to_update_str_datetime
 
-	def time_of_flight(self, qubit_index, res_index, flux_index, n_avg, cd_time, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000):
+	def time_of_flight(self, qubit_index, res_index, flux_index, n_avg, cd_time, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, machine = None):
 		"""
 		time of flight 1D experiment
 		this experiment calibrates
@@ -67,6 +67,7 @@ class EH_RR: # sub
 		:param f_str_datetime: datetime string for saving the data. Default is now.
 		:param simulate_flag: True-run simulation; False (default)-run experiment.
 		:param simulation_len: Length of the sequence to simulate. In clock cycles (4ns).
+		:param machine: None (default), will read from quam_state.json
 		Return:
 			machine
 			adc1
@@ -80,7 +81,8 @@ class EH_RR: # sub
 		if f_str_datetime is None:
 			f_str_datetime = self.update_str_datetime()
 
-		machine = QuAM("quam_state.json")
+		if machine is None:
+			machine = QuAM("quam_state.json")
 		config = build_config(machine)
 
 		with program() as raw_trace_prog:
@@ -132,7 +134,7 @@ class EH_RR: # sub
 
 			return machine, adc1,adc2,adc1_single_run,adc2_single_run
 
-	def rr_freq(self, res_freq_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True):
+	def rr_freq(self, res_freq_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
 		"""
 		resonator spectroscopy experiment
 		this experiment find the resonance frequency by localizing the minima in pulsed transmission signal.
@@ -149,6 +151,7 @@ class EH_RR: # sub
 		:param simulate_flag: True-run simulation; False (default)-run experiment.
 		:param simulation_len: Length of the sequence to simulate. In clock cycles (4ns).
 		:param plot_flag: True (default) plot the experiment. False, do not plot.
+		:param machine: None (default), will read from quam_state.json
 		Return:
 			machine
 			res_freq_sweep
@@ -160,7 +163,8 @@ class EH_RR: # sub
 		if f_str_datetime is None:
 			f_str_datetime = self.update_str_datetime()
 
-		machine = QuAM("quam_state.json")
+		if machine is None:
+			machine = QuAM("quam_state.json")
 		config = build_config(machine)
 		res_lo = machine.resonators[res_index].lo
 		res_if_sweep = res_freq_sweep - res_lo
@@ -255,7 +259,7 @@ class EH_Rabi:
 		self.update_tPath = ref_to_update_tPath
 		self.update_str_datetime = ref_to_update_str_datetime
 
-	def qubit_freq(self, qubit_freq_sweep, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, ff_amp = 0.0, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True):
+	def qubit_freq(self, qubit_freq_sweep, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, ff_amp = 0.0, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
 		"""
 		qubit spectroscopy experiment in 1D (equivalent of ESR for spin qubit)
 
@@ -272,6 +276,7 @@ class EH_Rabi:
 		:param simulate_flag: True-run simulation; False (default)-run experiment.
 		:param simulation_len: Length of the sequence to simulate. In clock cycles (4ns).
 		:param plot_flag: True (default) plot the experiment. False, do not plot.
+		:param machine: None (default), will read from quam_state.json
 		Return:
 			machine
 			qubit_freq_sweep
@@ -282,7 +287,8 @@ class EH_Rabi:
 		if f_str_datetime is None:
 			f_str_datetime = self.update_str_datetime()
 
-		machine = QuAM("quam_state.json")
+		if machine is None:
+			machine = QuAM("quam_state.json")
 		config = build_config(machine)
 		qubit_lo = machine.qubits[qubit_index].lo
 		qubit_if_sweep = qubit_freq_sweep - qubit_lo
@@ -305,6 +311,7 @@ class EH_Rabi:
 					play('pi'*amp(pi_amp_rel), machine.qubits[qubit_index].name)
 					align(machine.qubits[qubit_index].name, machine.flux_lines[flux_index].name,
 						  machine.resonators[res_index].name)
+					#wait(4) # avoid overlap between Z and RO
 					readout_avg_macro(machine.resonators[res_index].name,I,Q)
 					align()
 					wait(50)
@@ -374,7 +381,7 @@ class EH_Rabi:
 
 			return machine, qubit_freq_sweep, sig_amp
 
-	def rabi_length(self, rabi_duration_sweep, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True):
+	def rabi_length(self, rabi_duration_sweep, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
 		"""
 		qubit rabi experiment in 1D (sweeps length of rabi pulse)
 
@@ -390,6 +397,7 @@ class EH_Rabi:
 		:param simulate_flag:
 		:param simulation_len:
 		:param plot_flag:
+		:param machine: None (default), will read from quam_state.json
 		Return:
 			machine
 			rabi_duration_sweep: in ns!
@@ -404,7 +412,8 @@ class EH_Rabi:
 			print("some rabi lengths shorter than 4 clock cycles, removed from run")
 			rabi_duration_sweep = rabi_duration_sweep[rabi_duration_sweep>3]
 
-		machine = QuAM("quam_state.json")
+		if machine is None:
+			machine = QuAM("quam_state.json")
 		config = build_config(machine)
 		rabi_duration_sweep = rabi_duration_sweep.astype(int)
 
@@ -483,7 +492,7 @@ class EH_Rabi:
 
 			return machine, rabi_duration_sweep * 4, sig_amp
 
-	def rabi_amp(self, rabi_amp_sweep_rel, qubit_index, res_index, flux_index, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True):
+	def rabi_amp(self, rabi_amp_sweep_rel, qubit_index, res_index, flux_index, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
 		"""
 		qubit rabi experiment in 1D (sweeps amplitude of rabi pulse)
 		note that the input argument is in relative amplitude, the return argument is in absolute amplitude
@@ -498,6 +507,7 @@ class EH_Rabi:
 		:param simulate_flag:
 		:param simulation_len:
 		:param plot_flag:
+		:param machine: None (default), will read from quam_state.json
 		Return:
 			machine
 			rabi_amp_sweep_abs
@@ -508,7 +518,8 @@ class EH_Rabi:
 		if f_str_datetime is None:
 			f_str_datetime = self.update_str_datetime()
 
-		machine = QuAM("quam_state.json")
+		if machine is None:
+			machine = QuAM("quam_state.json")
 		config = build_config(machine)
 
 		#if max(abs(rabi_amp_sweep_rel)) > 2:
@@ -595,6 +606,224 @@ class EH_Rabi:
 	def rabi_amplitude(self):
 		pass
 
+class EH_T1:
+	def __init__(self, ref_to_update_tPath, ref_to_update_str_datetime):
+		self.update_tPath = ref_to_update_tPath
+		self.update_str_datetime = ref_to_update_str_datetime
+
+	def qubit_T1(self, tau_sweep_abs, qubit_index, res_index, flux_index, TLS_index=0, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+		"""
+		runs qubit T1. Designed to be at fixed 0 fast flux.
+
+		Args:
+			tau_sweep_abs (): in ns. Will be regulated to integer clock cycles
+			qubit_index ():
+			res_index ():
+			flux_index ():
+			n_avg ():
+			cd_time ():
+			tPath ():
+			f_str_datetime ():
+			simulate_flag ():
+			simulation_len ():
+			plot_flag ():
+			machine (): None (default), will read from quam_state.json
+
+		Returns:
+			machine
+			tau_sweep_abs
+			sig_amp
+
+		"""
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+
+		tau_sweep_cc = tau_sweep_abs//4 # in clock cycles
+		tau_sweep_cc = np.unique(tau_sweep_cc)
+		tau_sweep = tau_sweep_cc.astype(int) # clock cycles
+		tau_sweep_abs = tau_sweep * 4 # time in ns
+
+		with program() as t1_prog:
+			[I, Q, n, I_st, Q_st, n_st] = declare_vars()
+			tau = declare(int)
+
+			with for_(n, 0, n < n_avg, n + 1):
+				with for_(*from_array(tau, tau_sweep)):
+					play("pi", machine.qubits[qubit_index].name)
+					wait(tau, machine.qubits[qubit_index].name)
+					align(machine.qubits[qubit_index].name, machine.resonators[qubit_index].name)
+					readout_avg_macro(machine.resonators[res_index].name,I,Q)
+					save(I, I_st)
+					save(Q, Q_st)
+					wait(cd_time * u.ns, machine.resonators[res_index].name)
+				save(n, n_st)
+			with stream_processing():
+				I_st.buffer(len(tau_sweep)).average().save("I")
+				Q_st.buffer(len(tau_sweep)).average().save("Q")
+				n_st.save("iteration")
+
+		#  Open Communication with the QOP  #
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port='9510', octave=octave_config, log_level = "ERROR")
+
+		# Simulate or execute #
+		if simulate_flag:
+			simulation_config = SimulationConfig(duration=simulation_len)
+			job = qmm.simulate(config, t1_prog, simulation_config)
+			job.get_simulated_samples().con1.plot()
+
+			return None
+		else:
+			qm = qmm.open_qm(config)
+			job = qm.execute(t1_prog)
+			# Get results from QUA program
+			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+			# Live plotting
+			if plot_flag is True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [12, 8]
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure    while results.is_processing():
+			while results.is_processing():
+				# Fetch results
+				I, Q, iteration = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[qubit_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[qubit_index].readout_pulse_length)
+				sig_amp = np.sqrt(I ** 2 + Q ** 2)
+				sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+				# Progress bar
+				progress_counter(iteration, n_avg, start_time=results.get_start_time())
+				if plot_flag == True:
+					plt.cla()
+					plt.title("T1")
+					plt.plot(tau_sweep_abs, sig_amp, "b.")
+					plt.xlabel("tau [ns]")
+					plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
+					plt.pause(0.01)
+
+		# save data
+		exp_name = 'Q_T1'
+		qubit_name = 'Q' + str(qubit_index + 1)
+		f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+		file_name = f_str + '.mat'
+		json_name = f_str + '_state.json'
+		savemat(os.path.join(tPath, file_name),
+				{"Q_tau": tau_sweep_abs, "sig_amp": sig_amp, "sig_phase": sig_phase})
+		machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+		return machine, tau_sweep_abs, sig_amp
+
+	def TLS_T1(self, tau_sweep_abs, qubit_index, res_index, flux_index, TLS_index=0, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+
+		swap_length = machine.flux_lines[flux_index].iswap.length[TLS_index]
+		swap_amp = machine.flux_lines[flux_index].iswap.level[TLS_index]
+		tau_sweep_cc = tau_sweep_abs//4 # in clock cycles
+		tau_sweep_cc = np.unique(tau_sweep_cc)
+		tau_sweep = tau_sweep_cc.astype(int) # clock cycles
+		tau_sweep_abs = tau_sweep * 4 # time in ns
+
+		# fLux pulse baking for SWAP
+		flux_waveform = np.array([swap_amp] * swap_length)
+		def baked_swap_waveform(waveform):
+			pulse_segments = []  # Stores the baking objects
+			# Create the different baked sequences, each one corresponding to a different truncated duration
+			with baking(config, padding_method="right") as b:
+				b.add_op("flux_pulse", machine.flux_lines[flux_index].name, waveform.tolist())
+				b.play("flux_pulse", machine.flux_lines[flux_index].name)
+				pulse_segments.append(b)
+			return pulse_segments
+		square_TLS_swap = baked_swap_waveform(flux_waveform)
+
+		with program() as t1_prog:
+			[I, Q, n, I_st, Q_st, n_st] = declare_vars()
+			tau = declare(int)
+
+			with for_(n, 0, n < n_avg, n + 1):
+				with for_(*from_array(tau, tau_sweep)):
+					play("pi", machine.qubits[qubit_index].name)
+					align()
+					square_TLS_swap[0].run()
+					wait(tau, machine.flux_lines[flux_index].name)
+					square_TLS_swap[0].run()
+					align()
+					readout_avg_macro(machine.resonators[res_index].name,I,Q)
+					save(I, I_st)
+					save(Q, Q_st)
+					align()
+					wait(50)
+					square_TLS_swap[0].run(amp_array=[(machine.flux_lines[flux_index].name, -1)])
+					wait(50)
+					square_TLS_swap[0].run(amp_array=[(machine.flux_lines[flux_index].name, -1)])
+					wait(cd_time * u.ns, machine.resonators[res_index].name)
+				save(n, n_st)
+			with stream_processing():
+				I_st.buffer(len(tau_sweep)).average().save("I")
+				Q_st.buffer(len(tau_sweep)).average().save("Q")
+				n_st.save("iteration")
+
+		#  Open Communication with the QOP  #
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port='9510', octave=octave_config, log_level = "ERROR")
+
+		# Simulate or execute #
+		if simulate_flag:
+			simulation_config = SimulationConfig(duration=simulation_len)
+			job = qmm.simulate(config, t1_prog, simulation_config)
+			job.get_simulated_samples().con1.plot()
+
+			return None
+		else:
+			qm = qmm.open_qm(config)
+			job = qm.execute(t1_prog)
+			# Get results from QUA program
+			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+			# Live plotting
+			if plot_flag is True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [12, 8]
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure    while results.is_processing():
+			while results.is_processing():
+				# Fetch results
+				I, Q, iteration = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[qubit_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[qubit_index].readout_pulse_length)
+				sig_amp = np.sqrt(I ** 2 + Q ** 2)
+				sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+				# Progress bar
+				progress_counter(iteration, n_avg, start_time=results.get_start_time())
+				if plot_flag == True:
+					plt.cla()
+					plt.title("TLS T1")
+					plt.plot(tau_sweep_abs, sig_amp, "b.")
+					plt.xlabel("tau [ns]")
+					plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
+					plt.pause(0.01)
+
+		# save data
+		exp_name = 'TLS_T1'
+		qubit_name = 'Q' + str(qubit_index + 1) + "_TLS" + str(TLS_index + 1)
+		f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+		file_name = f_str + '.mat'
+		json_name = f_str + '_state.json'
+		savemat(os.path.join(tPath, file_name),
+				{"TLS_tau": tau_sweep_abs, "sig_amp": sig_amp, "sig_phase": sig_phase})
+		machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+		return machine, tau_sweep_abs, sig_amp
+
+
 class EH_Ramsey:
 	def __init__(self, ref_to_update_tPath, ref_to_update_str_datetime):
 		self.update_tPath = ref_to_update_tPath
@@ -631,4 +860,5 @@ class EH_exp1D:
 		self.Rabi = EH_Rabi(ref_to_update_tPath,ref_to_update_str_datetime)
 		self.Echo = EH_Echo(ref_to_update_tPath,ref_to_update_str_datetime)
 		self.CPMG = EH_CPMG(ref_to_update_tPath,ref_to_update_str_datetime)
+		self.T1 = EH_T1(ref_to_update_tPath,ref_to_update_str_datetime)
 
