@@ -239,8 +239,8 @@ class AH_exp1D:
 			return np.round((-popt[3]) / popt[0] / 2 / np.pi)
 		elif method == "power_rabi":
 			print(f"rabi_pi_pulse_amp: {(-popt[3]) / popt[0] / 2 / np.pi:.5f} V")
-			print(f"half period: {1 / 2 / popt[0]:.5f} V")
-			return np.round((-popt[3]) / popt[0] / 2 / np.pi, decimals = 5)
+			print(f"half period: {1 / 2 / popt[0]:.7f} V")
+			return np.round((-popt[3]) / popt[0] / 2 / np.pi, decimals = 7)
 
 	def T1(self, tau_sweep, sig_amp, method = "exp", plot_flag = True):
 		if method == "exp":

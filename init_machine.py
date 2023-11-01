@@ -3,11 +3,11 @@ from quam import QuAM
 machine = QuAM("quam_bootstrap_state.json", flat_data = False)
 
 qubits_name = ["q" + str(i) for i in range(1, 7)]
-qubits_connectivity = [(3, 4, "con1")]
+qubits_connectivity = [(3, 4, 3, "con1")]
 qubits_mixers_names = ["octave_octave1_2"]
 qubits_frequencies = [(6.289e9, 6.389e9),(6.107e9, 6.207e9),(5.982e9,6.082e9),(5.768e9,5.868e9),(5.567e9,5.667e9),(5.442e9,5.542e9)]
 resonators_name = ["r" + str(i) for i in range(1, 7)]
-resonators_connectivity = [(1, 2, "con1")]
+resonators_connectivity = [(1, 2, 1, "con1")]
 resonators_frequencies = [(7.130e9, 7.180e9), (6.999e9, 7.049e9), (6.875e9, 6.925e9),(6.217e9,6.267e9),(6.112e9,6.162e9),(6.018e9,6.068e9)]
 flux_lines_name = ["flux" + str(i) for i in range(1, 7)]
 flux_lines_connectivity = [(8, "con1"),(9, "con1"),(10, "con1"),(7, "con1"),(8, "con1"),(9, "con1")]
@@ -29,16 +29,21 @@ for i in range(6):
             "ac_stark_detuning": 0.0,
             "x180_length": 40,
             "x180_amp": 0.25,
-            "pi_length": [24],
+            "pi_length": [100],
             "pi_amp": [0.25],
             "wiring": {
-                "controller": qubits_connectivity[0][2],
+                "controller": qubits_connectivity[0][3],
                 "I": qubits_connectivity[0][0],
                 "Q": qubits_connectivity[0][1],
+                "digital_marker": qubits_connectivity[0][2],
             },
             "T1": 1230,
             "T2": 123,
             "tuning_curve": [0.0,0.0,0.0],
+            "digital_marker": {
+                "delay": 0,
+                "buffer": 0,
+            },
         }
     )
 
@@ -76,13 +81,18 @@ for i in range(6):
             "rotation_angle": 0.0,
             "ge_threshold": 0.0,
             "wiring": {
-                "controller": resonators_connectivity[0][2],
+                "controller": resonators_connectivity[0][3],
                 "I": resonators_connectivity[0][0],
                 "Q": resonators_connectivity[0][1],
+                "digital_marker": resonators_connectivity[0][2],
             },
             "RO_attenuation": [ROI[i], 10],
             "TWPA": [TWPA_freq[i], TWPA_pwr[i]],
             "tuning_curve": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            "digital_marker": {
+                "delay": 0,
+                "buffer": 0,
+            },
         }
     )
 machine._save("quam_state.json", flat_data=False)

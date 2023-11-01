@@ -247,6 +247,236 @@ class EH_RR: # sub
 
 			return machine, res_freq_sweep, sig_amp
 
+	def rr_switch_delay(self, rr_switch_delay_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+		"""
+		1D experiment to calibrate switch delay for the resonator.
+
+		Args:
+			rr_switch_delay_sweep (): in ns
+			qubit_index ():
+			res_index ():
+			flux_index ():
+			n_avg ():
+			cd_time ():
+			tPath ():
+			f_str_datetime ():
+			simulate_flag ():
+			simulation_len ():
+			plot_flag ():
+			machine ():
+
+		Returns:
+			machine
+			rr_switch_delay_sweep
+			sig_amp
+		"""
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+		res_lo = machine.resonators[res_index].lo
+		res_if = machine.resonators[res_index].f_readout - res_lo
+
+		if abs(res_if) > 400E6: # check if parameters are within hardware limit
+			print("res if > 400MHz")
+			return None
+
+		with program() as rr_switch_delay_prog:
+			[I,Q,n,I_st,Q_st,n_st] = declare_vars()
+
+			with for_(n, 0, n < n_avg, n+1):
+				update_frequency(machine.resonators[res_index].name, res_if)
+				readout_avg_macro(machine.resonators[res_index].name,I,Q)
+				wait(cd_time * u.ns, machine.resonators[res_index].name)
+				save(I, I_st)
+				save(Q, Q_st)
+			with stream_processing():
+				I_st.average().save("I")
+				Q_st.average().save("Q")
+
+		#####################################
+		#  Open Communication with the QOP  #
+		#####################################
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+		# Simulate or execute #
+		if simulate_flag: # simulation is useful to see the sequence, especially the timing (clock cycle vs ns)
+			simulation_config = SimulationConfig(duration=simulation_len)
+			job = qmm.simulate(config, rr_switch_delay_prog, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			start_time = time.time()
+			I_tot = []
+			Q_tot = []
+			if plot_flag == True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+
+			for delay_index, delay_value in enumerate(rr_switch_delay_sweep):
+				machine.resonators[res_index].digital_marker.delay = int(delay_value)
+				config = build_config(machine)
+
+				qm = qmm.open_qm(config)
+				job = qm.execute(rr_switch_delay_prog)
+				# Get results from QUA program
+				results = fetching_tool(job, data_list=["I", "Q"], mode = "live")
+
+				if plot_flag:
+					interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+				while results.is_processing():
+					# Fetch results
+					time.sleep(0.1)
+
+				I, Q = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+				I_tot.append(I)
+				Q_tot.append(Q)
+
+				# progress bar
+				progress_counter(delay_index, len(rr_switch_delay_sweep), start_time=start_time)
+
+			I_tot = np.array(I_tot)
+			Q_tot = np.array(Q_tot)
+			sigs_qubit = I_tot + 1j * Q_tot
+			sig_amp = np.abs(sigs_qubit)  # Amplitude
+			sig_phase = np.angle(sigs_qubit)  # Phase
+
+			if plot_flag == True:
+				plt.cla()
+				plt.title("res. switch delay")
+				plt.plot(rr_switch_delay_sweep, sig_amp, ".")
+				plt.xlabel("switch delay [ns]")
+				plt.ylabel("Signal [V]")
+
+			# save data
+			exp_name = 'res_switch_delay'
+			qubit_name = 'Q' + str(res_index+1)
+			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+			file_name = f_str + '.mat'
+			json_name = f_str + '_state.json'
+			savemat(os.path.join(tPath, file_name), {"res_delay": rr_switch_delay_sweep, "sig_amp": sig_amp, "sig_phase": sig_phase})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+			return machine, rr_switch_delay_sweep, sig_amp
+
+	def rr_switch_buffer(self, rr_switch_buffer_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+		"""
+		1D experiment to calibrate switch delay for the resonator.
+
+		Args:
+			rr_switch_buffer_sweep (): in ns, this will be added to both sides of the switch (x2), to account for the rise and fall
+			qubit_index ():
+			res_index ():
+			flux_index ():
+			n_avg ():
+			cd_time ():
+			tPath ():
+			f_str_datetime ():
+			simulate_flag ():
+			simulation_len ():
+			plot_flag ():
+			machine ():
+
+		Returns:
+
+		"""
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+		res_lo = machine.resonators[res_index].lo
+		res_if = machine.resonators[res_index].f_readout - res_lo
+
+		if abs(res_if) > 400E6: # check if parameters are within hardware limit
+			print("res if > 400MHz")
+			return None
+
+		with program() as rr_switch_buffer_prog:
+			[I,Q,n,I_st,Q_st,n_st] = declare_vars()
+
+			with for_(n, 0, n < n_avg, n+1):
+				update_frequency(machine.resonators[res_index].name, res_if)
+				readout_avg_macro(machine.resonators[res_index].name,I,Q)
+				wait(cd_time * u.ns, machine.resonators[res_index].name)
+				save(I, I_st)
+				save(Q, Q_st)
+			with stream_processing():
+				I_st.average().save("I")
+				Q_st.average().save("Q")
+
+		#####################################
+		#  Open Communication with the QOP  #
+		#####################################
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+		# Simulate or execute #
+		if simulate_flag: # simulation is useful to see the sequence, especially the timing (clock cycle vs ns)
+			simulation_config = SimulationConfig(duration=simulation_len)
+			job = qmm.simulate(config, rr_switch_buffer_prog, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			start_time = time.time()
+			I_tot = []
+			Q_tot = []
+			if plot_flag == True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+
+			for buffer_index, buffer_value in enumerate(rr_switch_buffer_sweep):
+				machine.resonators[res_index].digital_marker.buffer = int(buffer_value)
+				config = build_config(machine)
+
+				qm = qmm.open_qm(config)
+				job = qm.execute(rr_switch_buffer_prog)
+				# Get results from QUA program
+				results = fetching_tool(job, data_list=["I", "Q"], mode = "live")
+
+				if plot_flag:
+					interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+				while results.is_processing():
+					# Fetch results
+					time.sleep(0.1)
+
+				I, Q = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+				I_tot.append(I)
+				Q_tot.append(Q)
+
+				# progress bar
+				progress_counter(buffer_index, len(rr_switch_buffer_sweep), start_time=start_time)
+
+			I_tot = np.array(I_tot)
+			Q_tot = np.array(Q_tot)
+			sigs_qubit = I_tot + 1j * Q_tot
+			sig_amp = np.abs(sigs_qubit)  # Amplitude
+			sig_phase = np.angle(sigs_qubit)  # Phase
+
+			if plot_flag == True:
+				plt.cla()
+				plt.title("res. switch buffer")
+				plt.plot(rr_switch_buffer_sweep, sig_amp, ".")
+				plt.xlabel("switch buffer [ns]")
+				plt.ylabel("Signal [V]")
+
+			# save data
+			exp_name = 'res_switch_buffer'
+			qubit_name = 'Q' + str(res_index+1)
+			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+			file_name = f_str + '.mat'
+			json_name = f_str + '_state.json'
+			savemat(os.path.join(tPath, file_name), {"res_buffer": rr_switch_buffer_sweep, "sig_amp": sig_amp, "sig_phase": sig_phase})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+			return machine, rr_switch_buffer_sweep, sig_amp
+
 class EH_Rabi:
 	"""
 	class in ExperimentHandle, for Rabi sequence related 1D experiments
@@ -255,9 +485,10 @@ class EH_Rabi:
 		update_str_datetime
 		qubit_freq(self, qubit_freq_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, ff_amp = 1.0, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000)
 	"""
-	def __init__(self, ref_to_update_tPath, ref_to_update_str_datetime):
+	def __init__(self, ref_to_update_tPath, ref_to_update_str_datetime,ref_to_octave_calibration):
 		self.update_tPath = ref_to_update_tPath
 		self.update_str_datetime = ref_to_update_str_datetime
+		self.octave_calibration = ref_to_octave_calibration
 
 	def qubit_freq(self, qubit_freq_sweep, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, ff_amp = 0.0, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
 		"""
@@ -371,7 +602,7 @@ class EH_Rabi:
 			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
 
 			# save data
-			exp_name = 'Q_freq'
+			exp_name = 'freq'
 			qubit_name = 'Q' + str(qubit_index + 1)
 			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
 			file_name = f_str + '.mat'
@@ -423,7 +654,9 @@ class EH_Rabi:
 
 			with for_(n, 0, n < n_avg, n + 1):
 				with for_(*from_array(t, rabi_duration_sweep)):
+					wait(5, machine.qubits[qubit_index].name)
 					play("pi" * amp(pi_amp_rel), machine.qubits[qubit_index].name, duration=t)
+					wait(5, machine.qubits[qubit_index].name)
 					align(machine.qubits[qubit_index].name, machine.resonators[res_index].name)
 					readout_avg_macro(machine.resonators[res_index].name,I,Q)
 					save(I, I_st)
@@ -440,7 +673,7 @@ class EH_Rabi:
 		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
 
 		if simulate_flag:
-			simulation_config = SimulationConfig(duration=1000)  # in clock cycles
+			simulation_config = SimulationConfig(duration=simulation_len)  # in clock cycles
 			job = qmm.simulate(config, time_rabi, simulation_config)
 			job.get_simulated_samples().con1.plot()
 		else:
@@ -481,7 +714,7 @@ class EH_Rabi:
 			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
 
 			# save data
-			exp_name = 'Q_time_rabi'
+			exp_name = 'time_rabi'
 			qubit_name = 'Q' + str(qubit_index + 1)
 			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
 			file_name = f_str + '.mat'
@@ -522,6 +755,7 @@ class EH_Rabi:
 			machine = QuAM("quam_state.json")
 		config = build_config(machine)
 
+		qubit_if = machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].lo
 		#if max(abs(rabi_amp_sweep_rel)) > 2:
 		#	print("some relative amps > 2, removed from experiment run")
 		#	rabi_amp_sweep_rel = rabi_amp_sweep_rel[abs(rabi_amp_sweep_rel) < 2]
@@ -533,7 +767,10 @@ class EH_Rabi:
 
 			with for_(n, 0, n < n_avg, n + 1):
 				with for_(*from_array(a, rabi_amp_sweep_rel)):
+					update_frequency(machine.qubits[qubit_index].name, qubit_if)
+					wait(5, machine.qubits[qubit_index].name)
 					play("pi" * amp(a), machine.qubits[qubit_index].name)
+					wait(5, machine.qubits[qubit_index].name)
 					align(machine.qubits[qubit_index].name, machine.resonators[res_index].name)
 					readout_avg_macro(machine.resonators[res_index].name,I,Q)
 					save(I, I_st)
@@ -591,7 +828,7 @@ class EH_Rabi:
 			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
 
 			# save data
-			exp_name = 'Q_power_rabi'
+			exp_name = 'power_rabi'
 			qubit_name = 'Q' + str(qubit_index + 1)
 			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
 			file_name = f_str + '.mat'
@@ -602,9 +839,401 @@ class EH_Rabi:
 
 			return machine, rabi_amp_sweep_abs, sig_amp
 
+	def qubit_switch_delay(self, qubit_switch_delay_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+		"""
+		1D experiment to calibrate switch delay for the qubit.
 
-	def rabi_amplitude(self):
-		pass
+		Args:
+			qubit_switch_delay_sweep (): in ns
+			qubit_index ():
+			res_index ():
+			flux_index ():
+			n_avg ():
+			cd_time ():
+			tPath ():
+			f_str_datetime ():
+			simulate_flag ():
+			simulation_len ():
+			plot_flag ():
+			machine ():
+
+		Returns:
+			machine
+			qubit_switch_delay_sweep
+			sig_amp
+		"""
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+		qubit_lo = machine.qubits[qubit_index].lo
+		qubit_if = machine.qubits[qubit_index].f_01 - qubit_lo
+
+		if abs(qubit_if) > 400E6: # check if parameters are within hardware limit
+			print("qubit if > 400MHz")
+			return None
+
+		with program() as qubit_switch_delay_prog:
+			[I,Q,n,I_st,Q_st,n_st] = declare_vars()
+
+			with for_(n, 0, n < n_avg, n+1):
+				update_frequency(machine.qubits[qubit_index].name, qubit_if)
+				play('pi2', machine.qubits[qubit_index].name)
+				align()
+				readout_avg_macro(machine.resonators[res_index].name,I,Q)
+				wait(cd_time * u.ns, machine.resonators[res_index].name)
+				save(I, I_st)
+				save(Q, Q_st)
+			with stream_processing():
+				I_st.average().save("I")
+				Q_st.average().save("Q")
+
+		#####################################
+		#  Open Communication with the QOP  #
+		#####################################
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+		# Simulate or execute #
+		if simulate_flag: # simulation is useful to see the sequence, especially the timing (clock cycle vs ns)
+			simulation_config = SimulationConfig(duration=simulation_len)
+			job = qmm.simulate(config, qubit_switch_delay_prog, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			start_time = time.time()
+			I_tot = []
+			Q_tot = []
+			if plot_flag == True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+
+			for delay_index, delay_value in enumerate(qubit_switch_delay_sweep):
+				machine.qubits[qubit_index].digital_marker.delay = int(delay_value)
+				config = build_config(machine)
+
+				qm = qmm.open_qm(config)
+				job = qm.execute(qubit_switch_delay_prog)
+				# Get results from QUA program
+				results = fetching_tool(job, data_list=["I", "Q"], mode = "live")
+
+				if plot_flag:
+					interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+				while results.is_processing():
+					# Fetch results
+					time.sleep(0.1)
+
+				I, Q = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+				I_tot.append(I)
+				Q_tot.append(Q)
+
+				# progress bar
+				progress_counter(delay_index, len(qubit_switch_delay_sweep), start_time=start_time)
+
+			I_tot = np.array(I_tot)
+			Q_tot = np.array(Q_tot)
+			sigs_qubit = I_tot + 1j * Q_tot
+			sig_amp = np.abs(sigs_qubit)  # Amplitude
+			sig_phase = np.angle(sigs_qubit)  # Phase
+
+			if plot_flag == True:
+				plt.cla()
+				plt.title("qubit switch delay")
+				plt.plot(qubit_switch_delay_sweep, sig_amp, ".")
+				plt.xlabel("switch delay [ns]")
+				plt.ylabel("Signal [V]")
+
+			# save data
+			exp_name = 'qubit_switch_delay'
+			qubit_name = 'Q' + str(res_index+1)
+			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+			file_name = f_str + '.mat'
+			json_name = f_str + '_state.json'
+			savemat(os.path.join(tPath, file_name), {"qubit_delay": qubit_switch_delay_sweep, "sig_amp": sig_amp, "sig_phase": sig_phase})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+			return machine, qubit_switch_delay_sweep, sig_amp
+
+	def qubit_switch_buffer(self, qubit_switch_buffer_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+		"""
+		1D experiment to calibrate switch buffer for the qubit.
+
+		Args:
+			qubit_switch_buffer_sweep (): in ns, this will be added to both sides of the switch (x2), to account for the rise and fall
+			qubit_index ():
+			res_index ():
+			flux_index ():
+			n_avg ():
+			cd_time ():
+			tPath ():
+			f_str_datetime ():
+			simulate_flag ():
+			simulation_len ():
+			plot_flag ():
+			machine ():
+
+		Returns:
+			machine
+			qubit_switch_buffer_sweep
+			sig_amp
+		"""
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+		qubit_lo = machine.qubits[qubit_index].lo
+		qubit_if = machine.qubits[qubit_index].f_01 - qubit_lo
+
+		if abs(qubit_if) > 400E6: # check if parameters are within hardware limit
+			print("qubit if > 400MHz")
+			return None
+
+		with program() as qubit_switch_buffer_prog:
+			[I,Q,n,I_st,Q_st,n_st] = declare_vars()
+
+			with for_(n, 0, n < n_avg, n+1):
+				update_frequency(machine.qubits[qubit_index].name, qubit_if)
+				play('pi2', machine.qubits[qubit_index].name)
+				align()
+				readout_avg_macro(machine.resonators[res_index].name,I,Q)
+				wait(cd_time * u.ns, machine.resonators[res_index].name)
+				save(I, I_st)
+				save(Q, Q_st)
+			with stream_processing():
+				I_st.average().save("I")
+				Q_st.average().save("Q")
+
+		#####################################
+		#  Open Communication with the QOP  #
+		#####################################
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+		# Simulate or execute #
+		if simulate_flag: # simulation is useful to see the sequence, especially the timing (clock cycle vs ns)
+			simulation_config = SimulationConfig(duration=simulation_len)
+			job = qmm.simulate(config, qubit_switch_buffer_prog, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			start_time = time.time()
+			I_tot = []
+			Q_tot = []
+			if plot_flag == True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+
+			for buffer_index, buffer_value in enumerate(qubit_switch_buffer_sweep):
+				machine.qubits[qubit_index].digital_marker.buffer = int(buffer_value)
+				config = build_config(machine)
+
+				qm = qmm.open_qm(config)
+				job = qm.execute(qubit_switch_buffer_prog)
+				# Get results from QUA program
+				results = fetching_tool(job, data_list=["I", "Q"], mode = "live")
+
+				if plot_flag:
+					interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+				while results.is_processing():
+					# Fetch results
+					time.sleep(0.1)
+
+				I, Q = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+				I_tot.append(I)
+				Q_tot.append(Q)
+
+				# progress bar
+				progress_counter(buffer_index, len(qubit_switch_buffer_sweep), start_time=start_time)
+
+			I_tot = np.array(I_tot)
+			Q_tot = np.array(Q_tot)
+			sigs_qubit = I_tot + 1j * Q_tot
+			sig_amp = np.abs(sigs_qubit)  # Amplitude
+			sig_phase = np.angle(sigs_qubit)  # Phase
+
+			if plot_flag == True:
+				plt.cla()
+				plt.title("qubit switch buffer")
+				plt.plot(qubit_switch_buffer_sweep, sig_amp, ".")
+				plt.xlabel("switch buffer [ns]")
+				plt.ylabel("Signal [V]")
+
+			# save data
+			exp_name = 'qubit_switch_buffer'
+			qubit_name = 'Q' + str(res_index+1)
+			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+			file_name = f_str + '.mat'
+			json_name = f_str + '_state.json'
+			savemat(os.path.join(tPath, file_name), {"qubit_buffer": qubit_switch_buffer_sweep, "sig_amp": sig_amp, "sig_phase": sig_phase})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+			return machine, qubit_switch_buffer_sweep, sig_amp
+
+	def TLS_freq(self, TLS_freq_sweep, qubit_index, res_index, flux_index, TLS_index = 0, pi_amp_rel = 1.0, n_avg = 1E3, cd_time_qubit = 10E3, cd_time_TLS = None, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+		"""
+
+		Args:
+			TLS_freq_sweep ():
+			qubit_index ():
+			res_index ():
+			flux_index ():
+			TLS_index ():
+			pi_amp_rel ():
+			n_avg ():
+			cd_time ():
+			tPath ():
+			f_str_datetime ():
+			simulate_flag ():
+			simulation_len ():
+			plot_flag ():
+			machine ():
+
+		Returns:
+			machine
+			TLS_freq_sweep
+			sig_amp
+		"""
+		calibrate_octave = False # flat for calibrating octave. So that I can move this to the real run, avoiding it for simulation
+
+		if cd_time_TLS is None:
+			cd_time_TLS = cd_time_qubit
+
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+		qubit_lo = machine.qubits[qubit_index].lo
+		TLS_if_sweep = TLS_freq_sweep - qubit_lo
+		TLS_if_sweep = np.round(TLS_if_sweep)
+
+		# TLS pi pulse
+		TLS_pi_length = machine.qubits[qubit_index].pi_length[TLS_index+1]
+		TLS_pi_amp = machine.qubits[qubit_index].pi_amp[TLS_index+1]
+		TLS_pi_rel = TLS_pi_amp * pi_amp_rel / 0.1 # relative to cw waveform, since that's the pulse defined in configuration
+
+		if np.max(abs(TLS_if_sweep)) > 350E6: # check if parameters are within hardware limit
+			print("TLS if range > 350MHz, changing LO...")
+			qubit_lo = np.mean(TLS_freq_sweep) - 200E6
+			qubit_lo = int(qubit_lo.tolist())
+			machine.qubits[qubit_index].f_01 = qubit_lo + 200E6
+			machine.qubits[qubit_index].lo = qubit_lo + 0E6
+			calibrate_octave = True
+			# reassign values
+			TLS_if_sweep = TLS_freq_sweep - qubit_lo
+			TLS_if_sweep = np.round(TLS_if_sweep)
+			if np.max(abs(TLS_if_sweep)) > 350E6:  # check if parameters are within hardware limit
+				print("TLS freq sweep range too large, abort...")
+				return None
+
+		# fLux pulse baking for SWAP
+		swap_length = machine.flux_lines[flux_index].iswap.length[TLS_index]
+		swap_amp = machine.flux_lines[flux_index].iswap.level[TLS_index]
+		flux_waveform = np.array([swap_amp] * swap_length)
+		def baked_swap_waveform(waveform):
+			pulse_segments = []  # Stores the baking objects
+			# Create the different baked sequences, each one corresponding to a different truncated duration
+			with baking(config, padding_method="right") as b:
+				b.add_op("flux_pulse", machine.flux_lines[flux_index].name, waveform.tolist())
+				b.play("flux_pulse", machine.flux_lines[flux_index].name)
+				pulse_segments.append(b)
+			return pulse_segments
+
+		square_TLS_swap = baked_swap_waveform(flux_waveform)
+
+		with program() as TLS_freq_prog:
+			[I,Q,n,I_st,Q_st,n_st] = declare_vars()
+			df = declare(int)
+
+			with for_(n, 0, n < n_avg, n+1):
+				with for_(*from_array(df,TLS_if_sweep)):
+					update_frequency(machine.qubits[qubit_index].name, df)
+					play
+					play('cw' * amp(TLS_pi_rel), machine.qubits[qubit_index].name, duration = TLS_pi_length * u.ns)
+					align()
+					square_TLS_swap[0].run()
+					align()
+					readout_avg_macro(machine.resonators[res_index].name,I,Q)
+					align()
+					save(I, I_st)
+					save(Q, Q_st)
+					# eliminate charge accumulation, also initialize TLS
+					wait(cd_time_qubit * u.ns, machine.resonators[res_index].name)
+					align()
+					square_TLS_swap[0].run(amp_array=[(machine.flux_lines[flux_index].name, -1)])
+					wait(cd_time_TLS * u.ns, machine.resonators[res_index].name)
+				save(n, n_st)
+			with stream_processing():
+				n_st.save('iteration')
+				I_st.buffer(len(TLS_if_sweep)).average().save("I")
+				Q_st.buffer(len(TLS_if_sweep)).average().save("Q")
+
+		#####################################
+		#  Open Communication with the QOP  #
+		#####################################
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+		# Simulate or execute #
+		if simulate_flag: # simulation is useful to see the sequence, especially the timing (clock cycle vs ns)
+			simulation_config = SimulationConfig(duration=simulation_len)
+			job = qmm.simulate(config, TLS_freq_prog, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			if calibrate_octave:
+				self.octave_calibration(qubit_index, res_index, flux_index, machine=machine)
+
+			qm = qmm.open_qm(config)
+			job = qm.execute(TLS_freq_prog)
+			# Get results from QUA program
+			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+			# Live plotting
+		    #%matplotlib qt
+			if plot_flag == True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+			while results.is_processing():
+				# Fetch results
+				I, Q, iteration = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+				# progress bar
+				progress_counter(iteration, n_avg, start_time=results.get_start_time())
+
+				if plot_flag:
+					plt.cla()
+					plt.title("TLS spectroscopy")
+					plt.plot((TLS_freq_sweep) / u.MHz, np.sqrt(I**2 +  Q**2), ".")
+					plt.xlabel("Frequency [MHz]")
+					plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
+
+			# fetch all data after live-updating
+			I, Q, iteration = results.fetch_all()
+			# Convert I & Q to Volts
+			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+			sig_amp = np.sqrt(I**2 + Q**2)
+			# detrend removes the linear increase of phase
+			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+
+			# save data
+			exp_name = 'freq'
+			qubit_name = 'Q' + str(qubit_index + 1) + 'TLS' + str(TLS_index+1)
+			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+			file_name = f_str + '.mat'
+			json_name = f_str + '_state.json'
+			savemat(os.path.join(tPath, file_name), {"TLS_freq": TLS_freq_sweep, "sig_amp": sig_amp, "sig_phase": sig_phase})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+			return machine, TLS_freq_sweep, sig_amp
 
 class EH_T1:
 	def __init__(self, ref_to_update_tPath, ref_to_update_str_datetime):
@@ -706,7 +1335,7 @@ class EH_T1:
 					plt.pause(0.01)
 
 		# save data
-		exp_name = 'Q_T1'
+		exp_name = 'T1'
 		qubit_name = 'Q' + str(qubit_index + 1)
 		f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
 		file_name = f_str + '.mat'
@@ -812,7 +1441,7 @@ class EH_T1:
 					plt.pause(0.01)
 
 		# save data
-		exp_name = 'TLS_T1'
+		exp_name = 'T1'
 		qubit_name = 'Q' + str(qubit_index + 1) + "_TLS" + str(TLS_index + 1)
 		f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
 		file_name = f_str + '.mat'
@@ -822,7 +1451,6 @@ class EH_T1:
 		machine._save(os.path.join(tPath, json_name), flat_data=False)
 
 		return machine, tau_sweep_abs, sig_amp
-
 
 class EH_Ramsey:
 	def __init__(self, ref_to_update_tPath, ref_to_update_str_datetime):
@@ -853,11 +1481,11 @@ class EH_exp1D:
 		Echo: a class for running Echo sequence based experiments
 		CPMG: a class for running CPMG sequence based experiments
 	"""
-	def __init__(self,ref_to_update_tPath, ref_to_update_str_datetime):
+	def __init__(self,ref_to_update_tPath, ref_to_update_str_datetime, ref_to_octave_calibration):
 		self.update_tPath = ref_to_update_tPath
 		self.update_str_datetime = ref_to_update_str_datetime
 		self.RR = EH_RR(ref_to_update_tPath,ref_to_update_str_datetime)
-		self.Rabi = EH_Rabi(ref_to_update_tPath,ref_to_update_str_datetime)
+		self.Rabi = EH_Rabi(ref_to_update_tPath,ref_to_update_str_datetime,ref_to_octave_calibration)
 		self.Echo = EH_Echo(ref_to_update_tPath,ref_to_update_str_datetime)
 		self.CPMG = EH_CPMG(ref_to_update_tPath,ref_to_update_str_datetime)
 		self.T1 = EH_T1(ref_to_update_tPath,ref_to_update_str_datetime)

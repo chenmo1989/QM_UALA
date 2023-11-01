@@ -17,16 +17,21 @@ state = {
             "ac_stark_detuning": 0.0,
             "x180_length": 180,
             "x180_amp": 0.25,
-            "pi_length": [24],
+            "pi_length": [100],
             "pi_amp": [0.25],
             "wiring": {
                 "controller": "con1",
                 "I": 3,
                 "Q": 4,
+                "digital_marker": 3,
             },
             "T1": 1230,
             "T2": 123,
             "tuning_curve": [0.0,0.0,0.0],
+            "digital_marker": {
+                "delay": 0,
+                "buffer": 0,
+            },
         },
     ],
     "flux_lines": [
@@ -65,10 +70,15 @@ state = {
                 "controller": "con1",
                 "I": 1,
                 "Q": 2,
+                "digital_marker": 1,
             },
             "RO_attenuation": [32.0, 10.0],
             "TWPA": [6324E6,-10.0],
             "tuning_curve": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            "digital_marker": {
+                "delay": 0,
+                "buffer": 0,
+            },
         },
     ],
     "global_parameters": {

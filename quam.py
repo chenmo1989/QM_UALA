@@ -43,6 +43,14 @@ class Wiring(QuamComponent):
     controller: str
     I: int
     Q: int
+    digital_marker: int
+    
+
+
+@quam_data
+class Digital_marker(QuamComponent):
+    delay: int
+    buffer: int
     
 
 
@@ -65,6 +73,7 @@ class Qubit(QuamComponent):
     T2: int
     tuning_curve: List[Union[str, int, float, bool, list]]
     wiring: Wiring
+    digital_marker: Digital_marker
     
 
 
@@ -108,6 +117,14 @@ class Wiring3(QuamComponent):
     controller: str
     I: int
     Q: int
+    digital_marker: int
+    
+
+
+@quam_data
+class Digital_marker2(QuamComponent):
+    delay: int
+    buffer: int
     
 
 
@@ -128,6 +145,7 @@ class Resonator(QuamComponent):
     TWPA: List[Union[str, int, float, bool, list]]
     tuning_curve: List[Union[str, int, float, bool, list]]
     wiring: Wiring3
+    digital_marker: Digital_marker2
     
 
 

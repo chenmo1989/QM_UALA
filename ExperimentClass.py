@@ -23,7 +23,7 @@ class EH_expsave:
 
 class ExperimentHandle:
 	def __init__(self):
-		self.exp1D = EH_exp1D(self.update_tPath,self.update_str_datetime)
+		self.exp1D = EH_exp1D(self.update_tPath,self.update_str_datetime,self.octave_calibration)
 		self.exp2D = EH_exp2D(self.update_tPath,self.update_str_datetime,self.octave_calibration)
 		#self.expsave = EH_expsave()
 
@@ -114,7 +114,7 @@ class ExperimentHandle:
 		client.close()
 		return machine
 
-	def octave_calibration(self,qubit_index,res_index,flux_index,machine = None,log_flag = True,qubit_only = False):
+	def octave_calibration(self,qubit_index,res_index,flux_index,machine = None,log_flag = True,qubit_only = False,calibration_flag = True):
 		"""
 		calibrates octave, using parameters saved in machine
 		:param qubit_index:
@@ -123,15 +123,17 @@ class ExperimentHandle:
 		:param machine: if not given, takes value saved in quam_state.json
 		:param log_flag: True (default), have warnings from QM; False: error log only
 		:param qubit_only: False (default). If true, only calibrate qubit, skip the resonator.
+		:param calibration_flag: True (default). If false, will still update octave configuration, but not run calibration
 		:return:
 		"""
 		if machine is None:
 			machine = QuAM('quam_state.json')
 
 		# Configure the Octave parameters for each element
-		resonator = ElementsSettings("r" + str(qubit_index), gain=0, rf_in_port=["octave1", 1], down_convert_LO_source="Internal")
+		resonator = ElementsSettings("r" + str(res_index), gain=machine.resonators[res_index].rf_gain, rf_in_port=["octave1", 1], down_convert_LO_source="Internal",
+									 switch_mode = machine.resonators[res_index].rf_switch_mode)
 		# resonator_aux = ElementsSettings("resonator_aux", gain=0, rf_in_port=["octave1", 1], down_convert_LO_source="Internal")
-		qubit = ElementsSettings("q" + str(res_index), gain=0)
+		qubit = ElementsSettings("q" + str(qubit_index), gain=machine.qubits[qubit_index].rf_gain, switch_mode = machine.qubits[qubit_index].rf_switch_mode)
 		# Add the "octave" elements
 		if qubit_only:
 			elements_settings = [qubit]
@@ -157,40 +159,41 @@ class ExperimentHandle:
 			config=config,
 			octaves=octaves,
 			elements_settings=elements_settings,
-			calibration=True,
+			calibration=calibration_flag,
 		)
 
 		qm = qmm.open_qm(config)
 
-		calibration_parameters = json.load(open("calibration_db.json"))["_default"]
-		# for the qubit tone
-		IF = machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].lo
-		for i in calibration_parameters.keys():
-			if calibration_parameters[i]["lo_frequency"] == machine.qubits[qubit_index].lo:
-				if calibration_parameters[i]["if_frequency"] == IF:
-					I_off = calibration_parameters[i]["i_offset"]
-					Q_off = calibration_parameters[i]["q_offset"]
-					C_mat = calibration_parameters[i]["correction"]
-					qm = qmm.open_qm(config)
-					qm.set_output_dc_offset_by_element(machine.qubits[qubit_index].name, ('I', 'Q'), (I_off, Q_off))
+		if calibration_flag:
+			calibration_parameters = json.load(open("calibration_db.json"))["_default"]
+			# for the qubit tone
+			IF = machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].lo
+			for i in calibration_parameters.keys():
+				if calibration_parameters[i]["lo_frequency"] == machine.qubits[qubit_index].lo:
+					if calibration_parameters[i]["if_frequency"] == IF:
+						I_off = calibration_parameters[i]["i_offset"]
+						Q_off = calibration_parameters[i]["q_offset"]
+						C_mat = calibration_parameters[i]["correction"]
+						qm = qmm.open_qm(config)
+						qm.set_output_dc_offset_by_element(machine.qubits[qubit_index].name, ('I', 'Q'), (I_off, Q_off))
+					else:
+						pass
 				else:
 					pass
-			else:
-				pass
-		# for the resonator tone
-		IF = machine.resonators[res_index].f_readout - machine.resonators[res_index].lo
-		for i in calibration_parameters.keys():
-			if calibration_parameters[i]["lo_frequency"] == machine.resonators[qubit_index].lo:
-				if calibration_parameters[i]["if_frequency"] == IF:
-					I_off = calibration_parameters[i]["i_offset"]
-					Q_off = calibration_parameters[i]["q_offset"]
-					C_mat = calibration_parameters[i]["correction"]
-					qm = qmm.open_qm(config)
-					qm.set_output_dc_offset_by_element(machine.resonators[res_index].name, ('I', 'Q'), (I_off, Q_off))
+			# for the resonator tone
+			IF = machine.resonators[res_index].f_readout - machine.resonators[res_index].lo
+			for i in calibration_parameters.keys():
+				if calibration_parameters[i]["lo_frequency"] == machine.resonators[qubit_index].lo:
+					if calibration_parameters[i]["if_frequency"] == IF:
+						I_off = calibration_parameters[i]["i_offset"]
+						Q_off = calibration_parameters[i]["q_offset"]
+						C_mat = calibration_parameters[i]["correction"]
+						qm = qmm.open_qm(config)
+						qm.set_output_dc_offset_by_element(machine.resonators[res_index].name, ('I', 'Q'), (I_off, Q_off))
+					else:
+						pass
 				else:
 					pass
-			else:
-				pass
 
 		qmm.close()
 		return

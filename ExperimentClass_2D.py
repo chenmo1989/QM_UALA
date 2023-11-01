@@ -1379,7 +1379,7 @@ class EH_SWAP:
 			file_name = f_str + '.mat'
 			json_name = f_str + '_state.json'
 			savemat(os.path.join(tPath, file_name),
-					{"ff_sweep": ff_sweep_abs, "sig_amp": sig_amp, "sig_phase": sig_phase,
+					{"ff_sweep": ff_sweep_abs, "sig_amp": sig_amp.T, "sig_phase": sig_phase.T,
 					 "tau_sweep": tau_sweep_abs})
 
 			if plot_flag:
@@ -1403,7 +1403,7 @@ class EH_exp2D:
 		update_str_datetime: reference to Experiment.update_str_datetime
 		RR: a class for running readout resonator related experiments
 	"""
-	def __init__(self,ref_to_update_tPath, ref_to_update_str_datetime,ref_to_octave_calibration):
+	def __init__(self,ref_to_update_tPath, ref_to_update_str_datetime, ref_to_octave_calibration):
 		self.update_tPath = ref_to_update_tPath
 		self.update_str_datetime = ref_to_update_str_datetime
 		self.octave_calibration = ref_to_octave_calibration

@@ -184,6 +184,13 @@ def build_config(quam: QuAM):
                         "lo_frequency": quam.resonators[i].lo,
                         "mixer": "octave_octave1_1",
                     },
+                    "digitalInputs": {
+                        "digital_marker": {
+                            "port": ("con1", 1),
+                            "delay": quam.resonators[i].digital_marker.delay,
+                            "buffer": quam.resonators[i].digital_marker.buffer,
+                        },
+                    },
                     "intermediate_frequency": (quam.resonators[i].f_readout - quam.resonators[i].lo),
                     "operations": {
                         "cw": "const_pulse",
@@ -206,6 +213,13 @@ def build_config(quam: QuAM):
                         "lo_frequency": quam.resonators[i].lo,
                         "mixer": "octave_octave1_1",
                     },
+                    "digitalInputs": {
+                        "digital_marker": {
+                            "port": ("con1", 1),
+                            "delay": quam.resonators[i].digital_marker.delay,
+                            "buffer": quam.resonators[i].digital_marker.buffer,
+                        },
+                    },
                     "intermediate_frequency": (quam.resonators[i].f_readout - quam.resonators[i].lo),
                     "operations": {
                         "cw": "const_pulse",
@@ -227,6 +241,13 @@ def build_config(quam: QuAM):
                         "Q": (quam.qubits[i].wiring.controller, quam.qubits[i].wiring.Q),
                         "lo_frequency": quam.qubits[i].lo,
                         "mixer": quam.qubits[i].mixer_name,
+                    },
+                    "digitalInputs": {
+                        "digital_marker": {
+                            "port": ("con1", 3),
+                            "delay": quam.qubits[i].digital_marker.delay,
+                            "buffer": quam.qubits[i].digital_marker.buffer,
+                        },
                     },
                     "intermediate_frequency": (quam.qubits[i].f_01 - quam.qubits[i].lo),
                     "operations": {
@@ -282,6 +303,7 @@ def build_config(quam: QuAM):
                         "I": f"readout{i}_wf",
                         "Q": "zero_wf",
                     },
+                    "digital_marker": "ON",
                     "integration_weights": {
                         "cos": f"cosine_weights{i}",
                         "sin": f"sine_weights{i}",
@@ -293,7 +315,6 @@ def build_config(quam: QuAM):
                         "opt_sin": f"opt_sine_weights{i}",
                         "opt_minus_sin": f"opt_minus_sine_weights{i}",
                     },
-                    "digital_marker": "ON",
                 }
                 for i in range(len(quam.resonators))
             },
@@ -305,6 +326,7 @@ def build_config(quam: QuAM):
                         "I": f"pi_wf{i}",
                         "Q": "zero_wf",
                     },
+                    "digital_marker": "ON",
                 }
                 for i in range(len(quam.qubits))
             },
@@ -316,6 +338,7 @@ def build_config(quam: QuAM):
                         "I": f"pi_over_two_wf{i}",
                         "Q": "zero_wf",
                     },
+                    "digital_marker": "ON",
                 }
                 for i in range(len(quam.qubits))
             },
@@ -327,6 +350,7 @@ def build_config(quam: QuAM):
                         "I": f"x90_I_wf{i}",
                         "Q": f"x90_Q_wf{i}",
                     },
+                    "digital_marker": "ON",
                 }
                 for i in range(len(quam.qubits))
             },
@@ -338,6 +362,7 @@ def build_config(quam: QuAM):
                         "I": f"x180_I_wf{i}",
                         "Q": f"x180_Q_wf{i}",
                     },
+                    "digital_marker": "ON",
                 }
                 for i in range(len(quam.qubits))
             },
@@ -349,6 +374,7 @@ def build_config(quam: QuAM):
                         "I": f"minus_x90_I_wf{i}",
                         "Q": f"minus_x90_Q_wf{i}",
                     },
+                    "digital_marker": "ON",
                 }
                 for i in range(len(quam.qubits))
             },
@@ -360,6 +386,7 @@ def build_config(quam: QuAM):
                         "I": f"y90_I_wf{i}",
                         "Q": f"y90_Q_wf{i}",
                     },
+                    "digital_marker": "ON",
                 }
                 for i in range(len(quam.qubits))
             },
@@ -371,6 +398,7 @@ def build_config(quam: QuAM):
                         "I": f"y180_I_wf{i}",
                         "Q": f"y180_Q_wf{i}",
                     },
+                    "digital_marker": "ON",
                 }
                 for i in range(len(quam.qubits))
             },
@@ -382,6 +410,7 @@ def build_config(quam: QuAM):
                         "I": f"minus_y90_I_wf{i}",
                         "Q": f"minus_y90_Q_wf{i}",
                     },
+                    "digital_marker": "ON",
                 }
                 for i in range(len(quam.qubits))
             },
