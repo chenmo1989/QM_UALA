@@ -2,6 +2,7 @@
   "qubits": [{
       "name": "q0",
       "f_01": 6567349000.0,
+      "f_tls": [],
       "lo": 6617349000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
@@ -12,19 +13,21 @@
       "x180_length": 180,
       "x180_amp": 0.25,
       "pi_length": [100],
+      "pi_length_tls": [],
       "pi_amp": [0.25],
+      "pi_amp_tls": [],
       "T1": 1230,
       "T2": 123,
       "tuning_curve": [0.0,0.0,0.0],
+      "digital_marker": {
+        "delay": 0,
+        "buffer": 0
+      },
       "wiring": {
         "controller": "con1",
         "I": 3,
         "Q": 4,
         "digital_marker": 3
-      },
-      "digital_marker": {
-        "delay": 0,
-        "buffer": 0
       }
     }],
   "flux_lines": [{
@@ -62,15 +65,15 @@
       "RO_attenuation": [32.0,10.0],
       "TWPA": [6324000000.0,-10.0],
       "tuning_curve": [0.0,0.0,0.0,0.0,0.0,0.0],
+      "digital_marker": {
+        "delay": 0,
+        "buffer": 0
+      },
       "wiring": {
         "controller": "con1",
         "I": 1,
         "Q": 2,
         "digital_marker": 1
-      },
-      "digital_marker": {
-        "delay": 0,
-        "buffer": 0
       }
     }],
   "network": {

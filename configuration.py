@@ -417,7 +417,7 @@ def build_config(quam: QuAM):
         },
         "waveforms": {
             "zero_wf": {"type": "constant", "sample": 0.0},
-            "const_wf": {"type": "constant", "sample": 0.1},
+            "const_wf": {"type": "constant", "sample": 0.25},
             **{
                 f"const_flux{i}_wf": {"type": "constant", "sample": quam.flux_lines[i].flux_pulse_amp}
                 for i in range(len(quam.flux_lines))

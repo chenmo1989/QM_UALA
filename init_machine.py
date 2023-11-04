@@ -20,6 +20,7 @@ for i in range(6):
         {
             "name": qubits_name[i],
             "f_01": qubits_frequencies[i][0],
+            "f_tls": [],
             "lo": qubits_frequencies[i][1],
             "rf_gain": 0,
             "rf_switch_mode": "on",
@@ -30,19 +31,21 @@ for i in range(6):
             "x180_length": 40,
             "x180_amp": 0.25,
             "pi_length": [100],
+            "pi_length_tls": [],
             "pi_amp": [0.25],
-            "wiring": {
-                "controller": qubits_connectivity[0][3],
-                "I": qubits_connectivity[0][0],
-                "Q": qubits_connectivity[0][1],
-                "digital_marker": qubits_connectivity[0][2],
-            },
+            "pi_amp_tls": [],
             "T1": 1230,
             "T2": 123,
             "tuning_curve": [0.0,0.0,0.0],
             "digital_marker": {
                 "delay": 0,
                 "buffer": 0,
+            },
+            "wiring": {
+                "controller": qubits_connectivity[0][3],
+                "I": qubits_connectivity[0][0],
+                "Q": qubits_connectivity[0][1],
+                "digital_marker": qubits_connectivity[0][2],
             },
         }
     )
@@ -54,6 +57,7 @@ for i in range(6):
             "flux_pulse_amp": 0.25,
             "max_frequency_point": 0.0,
             "Z_delay": 19,
+            "dc_voltage": 0.0,
             "iswap": {
                 "length": [],
                 "level": [],
@@ -63,7 +67,6 @@ for i in range(6):
                 "port": flux_lines_connectivity[i][0],
                 "filter": {"iir_taps": [], "fir_taps": []},
             },
-            "dc_voltage": 0.0,
         },
     )
 for i in range(6):
@@ -80,18 +83,18 @@ for i in range(6):
             "readout_pulse_amp": 0.125,
             "rotation_angle": 0.0,
             "ge_threshold": 0.0,
-            "wiring": {
-                "controller": resonators_connectivity[0][3],
-                "I": resonators_connectivity[0][0],
-                "Q": resonators_connectivity[0][1],
-                "digital_marker": resonators_connectivity[0][2],
-            },
             "RO_attenuation": [ROI[i], 10],
             "TWPA": [TWPA_freq[i], TWPA_pwr[i]],
             "tuning_curve": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             "digital_marker": {
                 "delay": 0,
                 "buffer": 0,
+            },
+            "wiring": {
+                "controller": resonators_connectivity[0][3],
+                "I": resonators_connectivity[0][0],
+                "Q": resonators_connectivity[0][1],
+                "digital_marker": resonators_connectivity[0][2],
             },
         }
     )

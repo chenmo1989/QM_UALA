@@ -161,8 +161,8 @@ class EH_1D:
 		qubit_if_sweep = np.round(qubit_if_sweep)
 		ff_duration = machine.qubits[qubit_index].pi_length[0] + 40
 
-		if np.max(abs(qubit_if_sweep)) > 400E6: # check if parameters are within hardware limit
-			print("qubit if range > 400MHz")
+		if np.max(abs(qubit_if_sweep)) > 350E6: # check if parameters are within hardware limit
+			print("qubit if range > 350MHz")
 			return None, None, None
 
 		with program() as qubit_freq_prog:
@@ -633,18 +633,17 @@ class EH_Rabi:
 			progress_counter(ff_index, len(ff_sweep), start_time=start_time)
 			qubit_freq_est = qubit_freq_est_sweep[ff_index]
 
-			if qubit_lo - qubit_freq_est + max(qubit_if_sweep) > 350E6: # need to decrease LO
+			if qubit_lo - (qubit_freq_est - max(qubit_if_sweep)) > -50E6: # need to decrease LO
 				qubit_lo = qubit_freq_est + max(qubit_if_sweep) - 350E6
 				machine.qubits[qubit_index].lo = int(qubit_lo.tolist()) + 0E6
 				machine.qubits[qubit_index].f_01 = int(qubit_freq_est.tolist()) + 0E6
 				self.octave_calibration(qubit_index,res_index,flux_index,machine = machine)
 
-			if qubit_lo - qubit_freq_est - max(qubit_if_sweep) < -350E6: # need to increase LO
+			if qubit_lo - (qubit_freq_est + max(qubit_if_sweep)) < -350E6: # need to increase LO
 				qubit_lo = qubit_freq_est + max(qubit_if_sweep) - 350E6
 				machine.qubits[qubit_index].lo = int(qubit_lo.tolist()) + 0E6
 				machine.qubits[qubit_index].f_01 = int(qubit_freq_est.tolist()) + 0E6
 				self.octave_calibration(qubit_index,res_index,flux_index,machine = machine)
-
 			qubit_freq_sweep = qubit_freq_est + qubit_if_sweep
 
 			if plot_flag == True:

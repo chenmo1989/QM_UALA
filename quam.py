@@ -39,6 +39,13 @@ class Network(QuamComponent):
 
 
 @quam_data
+class Digital_marker(QuamComponent):
+    delay: int
+    buffer: int
+    
+
+
+@quam_data
 class Wiring(QuamComponent):
     controller: str
     I: int
@@ -48,16 +55,10 @@ class Wiring(QuamComponent):
 
 
 @quam_data
-class Digital_marker(QuamComponent):
-    delay: int
-    buffer: int
-    
-
-
-@quam_data
 class Qubit(QuamComponent):
     name: str
     f_01: float
+    f_tls: List[Union[str, int, float, bool, list]]
     lo: float
     rf_gain: int
     rf_switch_mode: str
@@ -68,12 +69,14 @@ class Qubit(QuamComponent):
     x180_length: int
     x180_amp: float
     pi_length: List[Union[str, int, float, bool, list]]
+    pi_length_tls: List[Union[str, int, float, bool, list]]
     pi_amp: List[Union[str, int, float, bool, list]]
+    pi_amp_tls: List[Union[str, int, float, bool, list]]
     T1: int
     T2: int
     tuning_curve: List[Union[str, int, float, bool, list]]
-    wiring: Wiring
     digital_marker: Digital_marker
+    wiring: Wiring
     
 
 
@@ -113,18 +116,18 @@ class Flux_line(QuamComponent):
 
 
 @quam_data
+class Digital_marker2(QuamComponent):
+    delay: int
+    buffer: int
+    
+
+
+@quam_data
 class Wiring3(QuamComponent):
     controller: str
     I: int
     Q: int
     digital_marker: int
-    
-
-
-@quam_data
-class Digital_marker2(QuamComponent):
-    delay: int
-    buffer: int
     
 
 
@@ -144,8 +147,8 @@ class Resonator(QuamComponent):
     RO_attenuation: List[Union[str, int, float, bool, list]]
     TWPA: List[Union[str, int, float, bool, list]]
     tuning_curve: List[Union[str, int, float, bool, list]]
-    wiring: Wiring3
     digital_marker: Digital_marker2
+    wiring: Wiring3
     
 
 
