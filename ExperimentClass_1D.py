@@ -134,7 +134,7 @@ class EH_RR: # sub
 
 			return machine, adc1,adc2,adc1_single_run,adc2_single_run
 
-	def rr_freq(self, res_freq_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+	def rr_freq(self, res_freq_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, readout_state = 'g', tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
 		"""
 		resonator spectroscopy experiment
 		this experiment find the resonance frequency by localizing the minima in pulsed transmission signal.
@@ -146,6 +146,7 @@ class EH_RR: # sub
 		:param flux_index:
 		:param n_avg: repetition of expeirment
 		:param cd_time: cooldown time between subsequent experiments
+		:param readout_state: 'g' (default). If 'e', readout done for |e>. If anything else, return error. Expandable for 'f' etc in the future.
 		:param tPath: target path/folder for saving the data. Default is today.
 		:param f_str_datetime: datetime string for saving the data. Default is now.
 		:param simulate_flag: True-run simulation; False (default)-run experiment.
@@ -180,12 +181,20 @@ class EH_RR: # sub
 
 			with for_(n, 0, n < n_avg, n+1):
 				with for_(*from_array(df,res_if_sweep)):
+					if readout_state == 'g':
+						pass
+					elif readout_state == 'e':
+						play("pi", machine.qubits[qubit_index].name)
+						align()
+					else:
+						print("readout state does not exist")
+						return None, None, None
 					update_frequency(machine.resonators[res_index].name, df)
 					readout_avg_macro(machine.resonators[res_index].name,I,Q)
 					wait(cd_time * u.ns, machine.resonators[res_index].name)
 					save(I, I_st)
 					save(Q, Q_st)
-				save(n, n_st)
+					save(n, n_st)
 			with stream_processing():
 				n_st.save('iteration')
 				I_st.buffer(len(res_if_sweep)).average().save("I")
@@ -242,7 +251,7 @@ class EH_RR: # sub
 			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
 			file_name = f_str + '.mat'
 			json_name = f_str + '_state.json'
-			savemat(os.path.join(tPath, file_name), {"RR_freq": res_freq_sweep, "sig_amp": sig_amp, "sig_phase": sig_phase})
+			savemat(os.path.join(tPath, file_name), {"RR_freq": res_freq_sweep, "sig_amp": sig_amp, "sig_phase": sig_phase, "readout_state": readout_state})
 			machine._save(os.path.join(tPath, json_name), flat_data=False)
 
 			return machine, res_freq_sweep, sig_amp
@@ -1383,6 +1392,571 @@ class EH_Rabi:
 
 			return machine, rabi_duration_sweep * 4, sig_amp
 
+	def ef_freq(self, ef_freq_sweep, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, pi_amp_rel_ef = 1.0, n_avg = 1E3, cd_time = 10E3, readout_state = 'g', tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+		"""
+		ef spectroscopy experiment in 1D
+
+		Args:
+		:param ef_freq_sweep: 1D array of qubit ef transition frequency sweep
+		:param qubit_index:
+		:param res_index:
+		:param flux_index:
+		:param pi_amp_rel:
+		:param pi_amp_rel_ef: 1.0 (default). relative amplitude of pi pulse for ef transition
+		:param n_avg: repetition of the experiments
+		:param cd_time: cooldown time between subsequent experiments
+		:param readout_state: state used for readout. If 'g' (default), ground state will be used, so a pi pulse to bring population back to g is employed. If 'e', then no additional pi pulse for readout is sent
+		:param ff_amp: fast flux amplitude the overlaps with the Rabi pulse. The ff pulse is 40ns longer than Rabi pulse, and share the same center time.
+		:param tPath: target path/folder for saving the data. Default is today.
+		:param f_str_datetime: datetime string for saving the data. Default is now.
+		:param simulate_flag: True-run simulation; False (default)-run experiment.
+		:param simulation_len: Length of the sequence to simulate. In clock cycles (4ns).
+		:param plot_flag: True (default) plot the experiment. False, do not plot.
+		:param machine: None (default), will read from quam_state.json
+		Return:
+			machine
+			ef_freq_sweep
+			sig_amp
+		"""
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+		qubit_lo = machine.qubits[qubit_index].lo
+		qubit_if = machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].lo
+		ef_if_sweep = ef_freq_sweep - qubit_lo
+		ef_if_sweep = np.round(ef_if_sweep)
+
+		if abs(qubit_if) > 350E6:
+			print("qubit if > 350MHz")
+			return None
+		if abs(qubit_if) < 20E6:
+			print("qubit if < 20MHz")
+			return None
+		if np.max(abs(ef_if_sweep)) > 350E6: # check if parameters are within hardware limit
+			print("ef if range > 350MHz")
+			return None
+		if np.min(abs(ef_if_sweep)) < 20E6: # check if parameters are within hardware limit
+			print("ef if range < 20MHz")
+			return None
+
+		if len(machine.qubits[qubit_index].pi_length) > 1:
+			ef_pi_length = machine.qubits[qubit_index].pi_length[1]
+		if len(machine.qubits[qubit_index].pi_amp) > 1:
+			pi_amp_rel_ef = machine.qubits[qubit_index].pi_amp[1]/machine.qubits[qubit_index].pi_amp[0] * pi_amp_rel_ef
+
+		with program() as ef_freq_prog:
+			[I,Q,n,I_st,Q_st,n_st] = declare_vars()
+			df = declare(int)
+			with for_(n, 0, n < n_avg, n+1):
+				with for_(*from_array(df,ef_if_sweep)):
+					update_frequency(machine.qubits[qubit_index].name, qubit_if)
+					play('pi'*amp(pi_amp_rel), machine.qubits[qubit_index].name)
+					align(machine.qubits[qubit_index].name, machine.flux_lines[flux_index].name,
+						  machine.resonators[res_index].name)
+					update_frequency(machine.qubits[qubit_index].name, df)
+					play('pi'*amp(pi_amp_rel_ef), machine.qubits[qubit_index].name, duration = ef_pi_length * u.ns)
+					if readout_state == 'g':
+						update_frequency(machine.qubits[qubit_index].name, qubit_if)
+						play('pi'*amp(pi_amp_rel), machine.qubits[qubit_index].name)
+					elif readout_state == 'e':
+						pass
+					else:
+						print('Readout state does not exist')
+						return None
+					align()
+					readout_avg_macro(machine.resonators[res_index].name,I,Q)
+					wait(cd_time * u.ns, machine.resonators[res_index].name)
+					save(I, I_st)
+					save(Q, Q_st)
+				save(n, n_st)
+			with stream_processing():
+				n_st.save('iteration')
+				I_st.buffer(len(ef_if_sweep)).average().save("I")
+				Q_st.buffer(len(ef_if_sweep)).average().save("Q")
+
+		#####################################
+		#  Open Communication with the QOP  #
+		#####################################
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+		# Simulate or execute #
+		if simulate_flag: # simulation is useful to see the sequence, especially the timing (clock cycle vs ns)
+			simulation_config = SimulationConfig(duration=simulation_len)
+			job = qmm.simulate(config, ef_freq_prog, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			qm = qmm.open_qm(config)
+			job = qm.execute(ef_freq_prog)
+			# Get results from QUA program
+			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+			# Live plotting
+		    #%matplotlib qt
+			if plot_flag == True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+			while results.is_processing():
+				# Fetch results
+				I, Q, iteration = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+				# progress bar
+				progress_counter(iteration, n_avg, start_time=results.get_start_time())
+
+				if plot_flag == True:
+					plt.cla()
+					plt.title("ef spectroscopy")
+					plt.plot((ef_freq_sweep) / u.MHz, np.sqrt(I**2 +  Q**2), ".")
+					plt.xlabel("Frequency [MHz]")
+					plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
+
+			# fetch all data after live-updating
+			I, Q, iteration = results.fetch_all()
+			# Convert I & Q to Volts
+			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+			sig_amp = np.sqrt(I**2 + Q**2)
+			# detrend removes the linear increase of phase
+			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+
+			# save data
+			exp_name = 'ef_freq'
+			qubit_name = 'Q' + str(qubit_index + 1)
+			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+			file_name = f_str + '.mat'
+			json_name = f_str + '_state.json'
+			savemat(os.path.join(tPath, file_name), {"ef_freq": ef_freq_sweep, "sig_amp": sig_amp, "sig_phase": sig_phase, "readout_state": readout_state})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+			return machine, ef_freq_sweep, sig_amp
+
+	def ef_rabi_length(self, rabi_duration_sweep, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, pi_amp_rel_ef = 1.0, n_avg = 1E3, cd_time = 10E3, readout_state = 'g', tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+		"""
+		qubit ef rabi experiment in 1D (sweeps length of rabi pulse)
+
+		:param rabi_duration_sweep: in clock cycles!
+		:param qubit_index:
+		:param res_index:
+		:param flux_index:
+		:param pi_amp_rel:
+		:param pi_amp_rel_ef: 1.0 (default). relative amplitude of pi pulse for ef transition
+		:param n_avg:
+		:param cd_time:
+		:param readout_state: state used for readout. 'g' (default), a g-e pi pulse before readout. If 'e', then no additional pi pulse for readout.
+		:param tPath:
+		:param f_str_datetime:
+		:param simulate_flag:
+		:param simulation_len:
+		:param plot_flag:
+		:param machine: None (default), will read from quam_state.json
+		Return:
+			machine
+			rabi_duration_sweep: in ns!
+			sig_amp
+		"""
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		if min(rabi_duration_sweep) < 4:
+			print("some rabi lengths shorter than 4 clock cycles, removed from run")
+			rabi_duration_sweep = rabi_duration_sweep[rabi_duration_sweep>3]
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+		rabi_duration_sweep = rabi_duration_sweep.astype(int)
+		qubit_if = machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].lo
+		ef_if = machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].anharmonicity - machine.qubits[qubit_index].lo
+
+		if abs(qubit_if) > 350E6:
+			print("qubit if > 350MHz")
+			return None
+		if abs(qubit_if) < 20E6:
+			print("qubit if < 20MHz")
+			return None
+		if abs(ef_if) > 350E6:
+			print("ef if > 350MHz")
+			return None
+		if abs(ef_if) < 20E6:
+			print("ef if < 20MHz")
+			return None
+
+		if len(machine.qubits[qubit_index].pi_amp) > 1:
+			pi_amp_rel_ef = machine.qubits[qubit_index].pi_amp[1]/machine.qubits[qubit_index].pi_amp[0] * pi_amp_rel_ef
+
+		with program() as time_rabi_ef:
+			[I, Q, n, I_st, Q_st, n_st] = declare_vars()
+			t = declare(int)
+
+			with for_(n, 0, n < n_avg, n + 1):
+				with for_(*from_array(t, rabi_duration_sweep)):
+					update_frequency(machine.qubits[qubit_index].name, qubit_if)
+					play('pi'*amp(pi_amp_rel), machine.qubits[qubit_index].name)
+					align(machine.qubits[qubit_index].name, machine.flux_lines[flux_index].name,
+						  machine.resonators[res_index].name)
+					update_frequency(machine.qubits[qubit_index].name, ef_if)
+					play('pi'*amp(pi_amp_rel_ef), machine.qubits[qubit_index].name, duration=t)
+					if readout_state == 'g':
+						update_frequency(machine.qubits[qubit_index].name, qubit_if)
+						play('pi'*amp(pi_amp_rel), machine.qubits[qubit_index].name)
+					elif readout_state == 'e':
+						pass
+					else:
+						print('Readout state does not exist')
+						return None, None, None
+					align()
+					readout_avg_macro(machine.resonators[res_index].name,I,Q)
+					save(I, I_st)
+					save(Q, Q_st)
+					wait(cd_time * u.ns, machine.resonators[res_index].name)
+				save(n, n_st)
+			with stream_processing():
+				I_st.buffer(len(rabi_duration_sweep)).average().save("I")
+				Q_st.buffer(len(rabi_duration_sweep)).average().save("Q")
+				n_st.save("iteration")
+
+		#  Open Communication with the QOP  #
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+
+		if simulate_flag:
+			simulation_config = SimulationConfig(duration=simulation_len)  # in clock cycles
+			job = qmm.simulate(config, time_rabi_ef, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			qm = qmm.open_qm(config)
+			job = qm.execute(time_rabi_ef)
+			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+
+			# Live plotting
+			if plot_flag == True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+
+			while results.is_processing():
+				# Fetch results
+				I, Q, iteration = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[qubit_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[qubit_index].readout_pulse_length)
+				sig_amp = np.sqrt(I ** 2 + Q ** 2)
+				sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+				# Progress bar
+				progress_counter(iteration, n_avg, start_time=results.get_start_time())
+				if plot_flag == True:
+					plt.cla()
+					plt.title("ef time Rabi")
+					plt.plot(rabi_duration_sweep * 4, sig_amp, "b.")
+					plt.xlabel("tau [ns]")
+					plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
+					plt.pause(0.01)
+
+			# fetch all data after live-updating
+			I, Q, iteration = results.fetch_all()
+			# Convert I & Q to Volts
+			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+			sig_amp = np.sqrt(I ** 2 + Q ** 2)
+			# detrend removes the linear increase of phase
+			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+
+			# save data
+			exp_name = 'ef_time_rabi'
+			qubit_name = 'Q' + str(qubit_index + 1)
+			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+			file_name = f_str + '.mat'
+			json_name = f_str + '_state.json'
+			savemat(os.path.join(tPath, file_name),
+					{"Q_rabi_duration": rabi_duration_sweep * 4, "sig_amp": sig_amp, "sig_phase": sig_phase, "readout_state": readout_state})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+			return machine, rabi_duration_sweep * 4, sig_amp
+
+	def ef_rabi_amp(self, rabi_amp_sweep_rel, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, n_avg = 1E3, cd_time = 10E3, readout_state = 'g', tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+		"""
+		qubit ef rabi experiment in 1D (sweeps amplitude of rabi pulse)
+		note that the input argument is in relative amplitude, the return argument is in absolute amplitude
+
+		:param rabi_amp_sweep_rel: relative amplitude, based on pi_amp[1]
+		:param qubit_index:
+		:param res_index:
+		:param flux_index:
+		:param pi_amp_rel: for the ge pulse
+		:param n_avg:
+		:param cd_time:
+		:param readout_state: state used for readout. 'g' (default), a g-e pi pulse before readout. If 'e', then no additional pi pulse for readout.
+		:param tPath:
+		:param f_str_datetime:
+		:param simulate_flag:
+		:param simulation_len:
+		:param plot_flag:
+		:param machine: None (default), will read from quam_state.json
+		Return:
+			machine
+			rabi_amp_sweep_abs
+			sig_amp
+		"""
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+
+		qubit_if = machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].lo
+		rabi_amp_sweep_abs = rabi_amp_sweep_rel * machine.qubits[qubit_index].pi_amp[1] # actual rabi amplitude
+		rabi_amp_sweep_rel = rabi_amp_sweep_abs / machine.qubits[qubit_index].pi_amp[0]
+		ef_if = machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].anharmonicity - machine.qubits[qubit_index].lo
+		if len(machine.qubits[qubit_index].pi_length) > 1:
+			ef_pi_length = machine.qubits[qubit_index].pi_length[1]
+
+		if abs(qubit_if) > 350E6:
+			print("qubit if > 350MHz")
+			return None
+		if abs(qubit_if) < 20E6:
+			print("qubit if < 20MHz")
+			return None
+		if abs(ef_if) > 350E6:
+			print("ef if > 350MHz")
+			return None
+		if abs(ef_if) < 20E6:
+			print("ef if < 20MHz")
+			return None
+
+		with program() as power_rabi_ef:
+			[I, Q, n, I_st, Q_st, n_st] = declare_vars()
+			a = declare(fixed)
+
+			with for_(n, 0, n < n_avg, n + 1):
+				with for_(*from_array(a, rabi_amp_sweep_rel)):
+					update_frequency(machine.qubits[qubit_index].name, qubit_if)
+					play('pi' * amp(pi_amp_rel), machine.qubits[qubit_index].name)
+					align(machine.qubits[qubit_index].name, machine.flux_lines[flux_index].name,
+						  machine.resonators[res_index].name)
+					update_frequency(machine.qubits[qubit_index].name, ef_if)
+					play('pi' * amp(a), machine.qubits[qubit_index].name, duration = ef_pi_length * u.ns)
+					if readout_state == 'g':
+						update_frequency(machine.qubits[qubit_index].name, qubit_if)
+						play('pi' * amp(pi_amp_rel), machine.qubits[qubit_index].name)
+					elif readout_state == 'e':
+						pass
+					else:
+						print('Readout state does not exist')
+						return None, None, None
+					align()
+					readout_avg_macro(machine.resonators[res_index].name, I, Q)
+					save(I, I_st)
+					save(Q, Q_st)
+					wait(cd_time * u.ns, machine.resonators[res_index].name)
+				save(n, n_st)
+
+			with stream_processing():
+				I_st.buffer(len(rabi_amp_sweep_rel)).average().save("I")
+				Q_st.buffer(len(rabi_amp_sweep_rel)).average().save("Q")
+				n_st.save("iteration")
+
+		#  Open Communication with the QOP  #
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+
+		if simulate_flag:
+			simulation_config = SimulationConfig(duration=1000)  # in clock cycles
+			job = qmm.simulate(config, power_rabi_ef, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			qm = qmm.open_qm(config)
+			job = qm.execute(power_rabi_ef)
+			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+
+			# Live plotting
+			if plot_flag == True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+
+			while results.is_processing():
+				# Fetch results
+				I, Q, iteration = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[qubit_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[qubit_index].readout_pulse_length)
+				sig_amp = np.sqrt(I ** 2 + Q ** 2)
+				sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+				# Progress bar
+				progress_counter(iteration, n_avg, start_time=results.get_start_time())
+				if plot_flag == True:
+					plt.cla()
+					plt.title("ef power Rabi")
+					plt.plot(rabi_amp_sweep_abs, sig_amp, "b.")
+					plt.xlabel("rabi amplitude [V]")
+					plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
+					plt.pause(0.01)
+
+			# fetch all data after live-updating
+			I, Q, iteration = results.fetch_all()
+			# Convert I & Q to Volts
+			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+			sig_amp = np.sqrt(I ** 2 + Q ** 2)
+			# detrend removes the linear increase of phase
+			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+
+			# save data
+			exp_name = 'ef_power_rabi'
+			qubit_name = 'Q' + str(qubit_index + 1)
+			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+			file_name = f_str + '.mat'
+			json_name = f_str + '_state.json'
+			savemat(os.path.join(tPath, file_name),
+					{"Q_rabi_amplitude": rabi_amp_sweep_abs, "sig_amp": sig_amp, "sig_phase": sig_phase, "readout_state": readout_state})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+			return machine, rabi_amp_sweep_abs, sig_amp
+
+	def ef_rabi_length_thermal(self, rabi_duration_sweep, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, pi_amp_rel_ef = 1.0, n_avg = 1E3, cd_time = 10E3, readout_state = 'e', tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+		"""
+		qubit ef rabi experiment with no first ge pi pulse
+		This is to measure the oscillation of residual |e> state, A_sig in https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.114.240501
+
+		:param rabi_duration_sweep: in clock cycles!
+		:param qubit_index:
+		:param res_index:
+		:param flux_index:
+		:param pi_amp_rel:
+		:param pi_amp_rel_ef: relative amplitude of pi pulse for ef transition, based on pi_amp[1]
+		:param n_avg:
+		:param cd_time:
+		:param readout_state: state used for readout. 'e' (default). If 'g', then a g-e pi pulse before readout.
+		:param tPath:
+		:param f_str_datetime:
+		:param simulate_flag:
+		:param simulation_len:
+		:param plot_flag:
+		:param machine: None (default), will read from quam_state.json
+		Return:
+			machine
+			rabi_duration_sweep: in ns!
+			sig_amp
+		"""
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		if min(rabi_duration_sweep) < 4:
+			print("some rabi lengths shorter than 4 clock cycles, removed from run")
+			rabi_duration_sweep = rabi_duration_sweep[rabi_duration_sweep>3]
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+		rabi_duration_sweep = rabi_duration_sweep.astype(int)
+		qubit_if = machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].lo
+		ef_if = machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].anharmonicity - machine.qubits[qubit_index].lo
+
+		if abs(qubit_if) > 350E6:
+			print("qubit if > 350MHz")
+			return None
+		if abs(qubit_if) < 20E6:
+			print("qubit if < 20MHz")
+			return None
+		if abs(ef_if) > 350E6:
+			print("ef if > 350MHz")
+			return None
+		if abs(ef_if) < 20E6:
+			print("ef if < 20MHz")
+			return None
+
+		if len(machine.qubits[qubit_index].pi_amp) > 1:
+			pi_amp_rel_ef = machine.qubits[qubit_index].pi_amp[1] / machine.qubits[qubit_index].pi_amp[0] * pi_amp_rel_ef
+
+		with program() as time_rabi_ef_thermal:
+			[I, Q, n, I_st, Q_st, n_st] = declare_vars()
+			t = declare(int)
+
+			with for_(n, 0, n < n_avg, n + 1):
+				with for_(*from_array(t, rabi_duration_sweep)):
+					update_frequency(machine.qubits[qubit_index].name, ef_if)
+					play('pi'*amp(pi_amp_rel_ef), machine.qubits[qubit_index].name, duration=t)
+					if readout_state == 'g':
+						update_frequency(machine.qubits[qubit_index].name, qubit_if)
+						play('pi'*amp(pi_amp_rel), machine.qubits[qubit_index].name)
+					elif readout_state == 'e':
+						pass
+					else:
+						print('Readout state does not exist')
+						return None
+					align()
+					readout_avg_macro(machine.resonators[res_index].name,I,Q)
+					save(I, I_st)
+					save(Q, Q_st)
+					wait(cd_time * u.ns, machine.resonators[res_index].name)
+				save(n, n_st)
+			with stream_processing():
+				I_st.buffer(len(rabi_duration_sweep)).average().save("I")
+				Q_st.buffer(len(rabi_duration_sweep)).average().save("Q")
+				n_st.save("iteration")
+
+		#  Open Communication with the QOP  #
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+
+		if simulate_flag:
+			simulation_config = SimulationConfig(duration=simulation_len)  # in clock cycles
+			job = qmm.simulate(config, time_rabi_ef_thermal, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			qm = qmm.open_qm(config)
+			job = qm.execute(time_rabi_ef_thermal)
+			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+
+			# Live plotting
+			if plot_flag == True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+
+			while results.is_processing():
+				# Fetch results
+				I, Q, iteration = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[qubit_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[qubit_index].readout_pulse_length)
+				sig_amp = np.sqrt(I ** 2 + Q ** 2)
+				sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+				# Progress bar
+				progress_counter(iteration, n_avg, start_time=results.get_start_time())
+				if plot_flag == True:
+					plt.cla()
+					plt.title("residual e state time rabi")
+					plt.plot(rabi_duration_sweep * 4, sig_amp, "b.")
+					plt.xlabel("tau [ns]")
+					plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
+					plt.pause(0.01)
+
+			# fetch all data after live-updating
+			I, Q, iteration = results.fetch_all()
+			# Convert I & Q to Volts
+			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+			sig_amp = np.sqrt(I ** 2 + Q ** 2)
+			# detrend removes the linear increase of phase
+			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+
+			# save data
+			exp_name = 'time_rabi_ef_thermal'
+			qubit_name = 'Q' + str(qubit_index + 1)
+			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+			file_name = f_str + '.mat'
+			json_name = f_str + '_state.json'
+			savemat(os.path.join(tPath, file_name),
+					{"Q_rabi_duration": rabi_duration_sweep * 4, "sig_amp": sig_amp, "sig_phase": sig_phase, "readout_state": readout_state})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+			return machine, rabi_duration_sweep * 4, sig_amp
 
 class EH_T1:
 	def __init__(self, ref_to_update_tPath, ref_to_update_str_datetime):
