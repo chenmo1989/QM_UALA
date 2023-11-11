@@ -3,7 +3,8 @@ from quam import QuAM
 machine = QuAM('quam_state.json')
 
 for i in range(7):
-    machine.qubits[i].rf_switch_mode = "on"
+    #machine.qubits[i].rf_switch_mode = "on"
+    machine.resonators[i].rf_switch_mode = "on"
     #machine.resonators[i].rf_switch_mode = "trig_normal"
     #machine.resonators[i].digital_marker.delay = 85
     #machine.resonators[i].digital_marker.buffer = 20

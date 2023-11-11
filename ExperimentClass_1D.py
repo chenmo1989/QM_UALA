@@ -2190,7 +2190,31 @@ class EH_SWAP:
 		self.octave_calibration = ref_to_octave_calibration
 
 	def rabi_SWAP(self, rabi_duration_sweep, qubit_index, res_index, flux_index, TLS_index, pi_amp_rel = 1.0, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+		"""
+		1D experiment: qubit rabi (length sweep) - SWAP - measure
+		qubit rabi duration in clock cycle
 
+		Args:
+			rabi_duration_sweep (): in clock cycle!
+			qubit_index ():
+			res_index ():
+			flux_index ():
+			TLS_index ():
+			pi_amp_rel ():
+			n_avg ():
+			cd_time ():
+			tPath ():
+			f_str_datetime ():
+			simulate_flag ():
+			simulation_len ():
+			plot_flag ():
+			machine ():
+
+		Returns:
+			machine
+			rabi_duration_sweep * 4: in ns
+			sig_amp
+		"""
 		if tPath is None:
 			tPath = self.update_tPath()
 		if f_str_datetime is None:
@@ -2305,6 +2329,30 @@ class EH_SWAP:
 
 	def swap_coarse(self,tau_sweep_abs, qubit_index, res_index, flux_index, TLS_index, n_avg, cd_time, tPath=None,
 					f_str_datetime=None, simulate_flag=False, simulation_len=1000, plot_flag=True, machine = None):
+		"""
+		1D SWAP spectroscopy. qubit pi - SWAP (sweep Z duration) - measure
+		tau_sweep in ns, only takes multiples of 4ns
+
+		Args:
+			tau_sweep_abs ():
+			qubit_index ():
+			res_index ():
+			flux_index ():
+			TLS_index ():
+			n_avg ():
+			cd_time ():
+			tPath ():
+			f_str_datetime ():
+			simulate_flag ():
+			simulation_len ():
+			plot_flag ():
+			machine ():
+
+		Returns:
+			machine
+			tau_sweep_abs
+			sig_amp
+		"""
 
 		if tPath is None:
 			tPath = self.update_tPath()
@@ -2388,6 +2436,7 @@ class EH_SWAP:
 			savemat(os.path.join(tPath, file_name),
 					{"ff_amp": machine.flux_lines[flux_index].iswap.level[TLS_index], "sig_amp": sig_amp, "sig_phase": sig_phase,
 					 "tau_sweep": tau_sweep_abs})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
 
 			if plot_flag:
 				plt.cla()
@@ -2398,6 +2447,30 @@ class EH_SWAP:
 		return machine, tau_sweep_abs, sig_amp
 
 	def SWAP_rabi(self, rabi_duration_sweep, qubit_index, res_index, flux_index, TLS_index, pi_amp_rel = 1.0, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+		"""
+		1D experiment for debug: SWAP - qubit rabi (sweep duration) - measure
+
+		Args:
+			rabi_duration_sweep (): in clock cycle
+			qubit_index ():
+			res_index ():
+			flux_index ():
+			TLS_index ():
+			pi_amp_rel ():
+			n_avg ():
+			cd_time ():
+			tPath ():
+			f_str_datetime ():
+			simulate_flag ():
+			simulation_len ():
+			plot_flag ():
+			machine ():
+
+		Returns:
+			machine
+			rabi_duration_sweep * 4
+			sig_amp
+		"""
 
 		if tPath is None:
 			tPath = self.update_tPath()
@@ -2512,7 +2585,30 @@ class EH_SWAP:
 			return machine, rabi_duration_sweep * 4, sig_amp
 
 	def rabi_SWAP2(self, rabi_duration_sweep, qubit_index, res_index, flux_index, TLS_index, pi_amp_rel = 1.0, n_avg = 1E3, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+		"""
+		1D experiment: qubit rabi (sweep duration) - SWAP - SWAP, to see if the state comes back
 
+		Args:
+			rabi_duration_sweep (): in clock cycle
+			qubit_index ():
+			res_index ():
+			flux_index ():
+			TLS_index ():
+			pi_amp_rel ():
+			n_avg ():
+			cd_time ():
+			tPath ():
+			f_str_datetime ():
+			simulate_flag ():
+			simulation_len ():
+			plot_flag ():
+			machine ():
+
+		Returns:
+			machine
+			rabi_duration_sweep * 4
+			sig_amp
+		"""
 		if tPath is None:
 			tPath = self.update_tPath()
 		if f_str_datetime is None:
@@ -2635,6 +2731,128 @@ class EH_Ramsey:
 		self.update_tPath = ref_to_update_tPath
 		self.update_str_datetime = ref_to_update_str_datetime
 
+	def ramsey_virtual_rotation(self, ramsey_duration_sweep, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, n_avg = 1E3, detuning = 1E6, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+		"""
+		qubit Ramsey in 1D with virtual Z rotation
+		sequence given by pi/2 - wait - pi/2 fro various wait times
+		the frame of the last pi/2 pulse is rotated rather than using qubit detuning
+
+
+		:param ramsey_duration_sweep: in clock cycles!
+		:param qubit_index:
+		:param res_index:
+		:param flux_index:
+		:param pi_amp_rel:
+		:param n_avg:
+		:param detuning: effective detuning that is transformed into a virtual z rotation
+		:param cd_time:
+		:param tPath:
+		:param f_str_datetime:
+		:param simulate_flag:
+		:param simulation_len:
+		:param plot_flag:
+		:param machine: None (default), will read from quam_state.json
+		Return:
+			machine
+			rabi_duration_sweep: in ns!
+			sig_amp
+		"""
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		if min(ramsey_duration_sweep) < 4:
+			print("some ramsey lengths shorter than 4 clock cycles, removed from run")
+			ramsey_duration_sweep = ramsey_duration_sweep[ramsey_duration_sweep>3]
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+		config = build_config(machine)
+		ramsey_duration_sweep = ramsey_duration_sweep.astype(int)
+
+		with program() as ramsey_vr:
+			[I, Q, n, I_st, Q_st, n_st] = declare_vars()
+			t = declare(int)
+			phi = declare(fixed) # for virtual z rotation
+
+			with for_(n, 0, n < n_avg, n + 1):
+				with for_(*from_array(t, ramsey_duration_sweep)):
+					assign(phi, Cast.mul_fixed_by_int(detuning * 1e-9, 4 * t))
+					with strict_timing_():
+						play("pi2" * amp(pi_amp_rel), machine.qubits[qubit_index].name)
+						wait(t, machine.qubits[qubit_index].name)
+						frame_rotation_2pi(phi, machine.qubits[qubit_index].name)
+						play("pi2" * amp(pi_amp_rel), machine.qubits[qubit_index].name)
+					align(machine.qubits[qubit_index].name, machine.resonators[res_index].name)
+					readout_avg_macro(machine.resonators[res_index].name,I,Q)
+					save(I, I_st)
+					save(Q, Q_st)
+					wait(cd_time * u.ns, machine.resonators[qubit_index].name)
+					reset_frame(machine.qubits[qubit_index].name) # to avoid phase accumulation
+				save(n, n_st)
+
+			with stream_processing():
+				I_st.buffer(len(ramsey_duration_sweep)).average().save("I")
+				Q_st.buffer(len(ramsey_duration_sweep)).average().save("Q")
+				n_st.save("iteration")
+
+		#  Open Communication with the QOP  #
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+
+		if simulate_flag:
+			simulation_config = SimulationConfig(duration=simulation_len)  # in clock cycles
+			job = qmm.simulate(config, ramsey_vr, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			qm = qmm.open_qm(config)
+			job = qm.execute(ramsey_vr)
+			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+
+			# Live plotting
+			if plot_flag == True:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+
+			while results.is_processing():
+				# Fetch results
+				I, Q, iteration = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[qubit_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[qubit_index].readout_pulse_length)
+				sig_amp = np.sqrt(I ** 2 + Q ** 2)
+				sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+				# Progress bar
+				progress_counter(iteration, n_avg, start_time=results.get_start_time())
+				if plot_flag == True:
+					plt.cla()
+					plt.title("Ramsey with detuning = %i Hz" %detuning)
+					plt.plot(ramsey_duration_sweep * 4, sig_amp, "b.")
+					plt.xlabel("tau [ns]")
+					plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
+					plt.pause(0.01)
+
+			# fetch all data after live-updating
+			I, Q, iteration = results.fetch_all()
+			# Convert I & Q to Volts
+			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+			sig_amp = np.sqrt(I ** 2 + Q ** 2)
+			# detrend removes the linear increase of phase
+			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+
+			# save data
+			exp_name = 'ramsey_vr'
+			qubit_name = 'Q' + str(qubit_index + 1)
+			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+			file_name = f_str + '.mat'
+			json_name = f_str + '_state.json'
+			savemat(os.path.join(tPath, file_name),
+					{"Q_ramsey_duration": ramsey_duration_sweep * 4, "sig_amp": sig_amp, "sig_phase": sig_phase})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+			return machine, ramsey_duration_sweep * 4, sig_amp
+
 class EH_Echo:
 	def __init__(self, ref_to_update_tPath, ref_to_update_str_datetime):
 		self.update_tPath = ref_to_update_tPath
@@ -2668,4 +2886,5 @@ class EH_exp1D:
 		self.Echo = EH_Echo(ref_to_update_tPath,ref_to_update_str_datetime)
 		self.CPMG = EH_CPMG(ref_to_update_tPath,ref_to_update_str_datetime)
 		self.T1 = EH_T1(ref_to_update_tPath,ref_to_update_str_datetime)
+		self.Ramsey = EH_Ramsey(ref_to_update_tPath, ref_to_update_str_datetime)
 

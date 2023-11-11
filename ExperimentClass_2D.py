@@ -163,7 +163,7 @@ class EH_1D:
 
 		if np.max(abs(qubit_if_sweep)) > 350E6: # check if parameters are within hardware limit
 			print("qubit if range > 350MHz")
-			return None, None, None
+			return None
 
 		with program() as qubit_freq_prog:
 			[I,Q,n,I_st,Q_st,n_st] = declare_vars()
@@ -430,11 +430,11 @@ class EH_Rabi:
 		self.exp1D = ref_to_local_exp1D
 		self.octave_calibration = ref_to_octave_calibration
 
-	def qubit_freq_vs_dc_flux(self, dc_flux_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, pi_amp_rel = 1.0,
+	def qubit_freq_vs_dc_flux(self, dc_flux_sweep, qubit_index, res_index, flux_index, n_avg, cd_time, pi_amp_rel = 1.0, ham_param = None,
 					  poly_param = None, tPath=None, f_str_datetime=None, simulate_flag=False, simulation_len=1000, plot_flag=True, machine = None):
 		"""
 		qubit spectroscopy vs dc flux 2D experiment
-		go back and force between 1D resonator spectroscopy and 1D qubit spectroscopy.
+		go back and forth between 1D resonator spectroscopy and 1D qubit spectroscopy.
 		end result should be two 2D experiments, one for RR, one for qubit.
 		Requires the ham_param for RR, and poly_param for qubit
 		This sweep is not squared!!
@@ -474,6 +474,21 @@ class EH_Rabi:
 			poly_param = machine.qubits[qubit_index].tuning_curve
 		if ham_param is None:
 			ham_param = machine.resonators[res_index].tuning_curve
+
+		qubit_freq_est = np.polyval(poly_param, dc_flux_sweep) * 1E6  # in Hz
+		qubit_lo = machine.qubits[qubit_index].lo
+		if qubit_lo < 2E9:
+			print("LO < 2GHz, abort")
+			return None
+
+		qubit_if_sweep = qubit_freq_est - qubit_lo
+		qubit_if_sweep = np.round(qubit_if_sweep)
+		if np.max(abs(qubit_if_sweep)) > 350E6:  # check if parameters are within hardware limit
+			print("qubit if for est. freq > 350MHz")
+			return None
+		if np.min(abs(qubit_if_sweep)) < 20E6:  # check if parameters are within hardware limit
+			print("qubit if for est. freq < 20MHz")
+			return None
 
 		# Initialize empty vectors to store the global 'I' & 'Q' results
 		I_qubit_tot = []
@@ -551,6 +566,7 @@ class EH_Rabi:
 		savemat(os.path.join(tPath, file_name),
 				{"RR_freq": res_freq_sweep, "sig_amp_res": sig_amp_res, "sig_phase_res": sig_phase_res, "dc_flux_sweep": dc_flux_sweep,
 				 "Q_freq": qubit_freq_sweep, "sig_amp_qubit": sig_amp_qubit, "sig_phase_qubit": sig_phase_qubit})
+		machine._save(os.path.join(tPath, json_name), flat_data=False)
 
 		# plot
 		qubit_freq_sweep_plt = qubit_freq_sweep.reshape(np.size(dc_flux_sweep),
@@ -637,13 +653,13 @@ class EH_Rabi:
 				qubit_lo = qubit_freq_est + max(qubit_if_sweep) - 350E6
 				machine.qubits[qubit_index].lo = int(qubit_lo.tolist()) + 0E6
 				machine.qubits[qubit_index].f_01 = int(qubit_freq_est.tolist()) + 0E6
-				self.octave_calibration(qubit_index,res_index,flux_index,machine = machine)
+				self.octave_calibration(qubit_index,res_index,flux_index,machine = machine, qubit_only = True)
 
 			if qubit_lo - (qubit_freq_est + max(qubit_if_sweep)) < -350E6: # need to increase LO
 				qubit_lo = qubit_freq_est + max(qubit_if_sweep) - 350E6
 				machine.qubits[qubit_index].lo = int(qubit_lo.tolist()) + 0E6
 				machine.qubits[qubit_index].f_01 = int(qubit_freq_est.tolist()) + 0E6
-				self.octave_calibration(qubit_index,res_index,flux_index,machine = machine)
+				self.octave_calibration(qubit_index,res_index,flux_index,machine = machine, qubit_only = True)
 			qubit_freq_sweep = qubit_freq_est + qubit_if_sweep
 
 			if plot_flag == True:
@@ -678,6 +694,7 @@ class EH_Rabi:
 		savemat(os.path.join(tPath, file_name),
 				{"fast_flux_sweep": ff_sweep_abs,
 				 "Q_freq": qubit_freq_sweep, "sig_amp_qubit": sig_amp_qubit, "sig_phase_qubit": sig_phase_qubit})
+		machine._save(os.path.join(tPath, json_name), flat_data=False)
 
 		# plot
 		qubit_freq_sweep_plt = qubit_freq_sweep.reshape(np.size(ff_sweep),
@@ -905,7 +922,7 @@ class EH_Rabi:
 			qubit_lo = qubit_freq_sweep_head - 300E6
 			machine.qubits[qubit_index].lo = int(qubit_lo.tolist()) + 0E6
 			machine.qubits[qubit_index].f_01 = int(qubit_lo.tolist()) + 200E6  # calibrate in the center of the +ive sweep range
-			self.octave_calibration(qubit_index, res_index, flux_index, machine=machine)
+			self.octave_calibration(qubit_index, res_index, flux_index, machine=machine, qubit_only = True)
 			# qubit freq vs fast flux, sweep over +ive and -ive IF freq
 			for freq_seg_index in [freq_seg_index_pos_IF_LO1,freq_seg_index_neg_IF_LO1]:
 				ff_sweep_rel_seg = ff_sweep_rel[freq_seg_index[0]:freq_seg_index[1]]
@@ -934,7 +951,7 @@ class EH_Rabi:
 			machine.qubits[qubit_index].lo = int(qubit_lo.tolist()) + 0E6
 			machine.qubits[qubit_index].f_01 = machine.qubits[
 												   qubit_index].lo + 200E6  # calibrate in the center of the +ive sweep range
-			self.octave_calibration(qubit_index, res_index, flux_index, machine=machine)
+			self.octave_calibration(qubit_index, res_index, flux_index, machine=machine, qubit_only = True)
 			# qubit freq vs fast flux, sweep over +ive and -ive IF freq
 			for freq_seg_index in [freq_seg_index_pos_IF_LO2, freq_seg_index_neg_IF_LO2]:
 				ff_sweep_rel_seg = ff_sweep_rel[freq_seg_index[0]:freq_seg_index[1]]
@@ -984,11 +1001,12 @@ class EH_Rabi:
 		_, ff_sweep_plt = np.meshgrid(qubit_freq_sweep[0, :], ff_sweep_abs)
 
 		# plot
-		plt.pcolormesh(ff_sweep_plt, qubit_freq_sweep / u.MHz, sig_amp_qubit, cmap="seismic")
-		plt.title("Qubit tuning curve")
-		plt.xlabel("fast flux level [V]")
-		plt.ylabel("Frequency [MHz]")
-		plt.colorbar()
+		if plot_flag == True:
+			plt.pcolormesh(ff_sweep_plt, qubit_freq_sweep / u.MHz, sig_amp_qubit, cmap="seismic")
+			plt.title("Qubit tuning curve")
+			plt.xlabel("fast flux level [V]")
+			plt.ylabel("Frequency [MHz]")
+			plt.colorbar()
 
 		# save data
 		exp_name = 'qubit_freq_vs_fast_flux'
@@ -999,6 +1017,7 @@ class EH_Rabi:
 		savemat(os.path.join(tPath, file_name),
 				{"fast_flux_sweep": ff_sweep_abs,
 				 "Q_freq": qubit_freq_sweep, "sig_amp_qubit": sig_amp_qubit, "sig_phase_qubit": sig_phase_qubit})
+		machine._save(os.path.join(tPath, json_name), flat_data=False)
 
 		return machine, qubit_freq_sweep, ff_sweep_abs, sig_amp_qubit
 
@@ -1095,6 +1114,7 @@ class EH_Rabi:
 		savemat(os.path.join(tPath, file_name),
 				{"fast_flux_sweep": ff_sweep_abs,
 				 "Q_freq": qubit_freq_sweep, "sig_amp_qubit": sig_amp_qubit, "sig_phase_qubit": sig_phase_qubit})
+		machine._save(os.path.join(tPath, json_name), flat_data=False)
 
 		# plot
 		qubit_freq_sweep_plt = qubit_freq_sweep.reshape(np.size(ff_sweep_abs),
@@ -1229,6 +1249,7 @@ class EH_SWAP:
 			savemat(os.path.join(tPath, file_name),
 					{"ff_sweep": ff_sweep_abs, "sig_amp": sig_amp, "sig_phase": sig_phase,
 					 "tau_sweep": tau_sweep_abs})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
 
 			if plot_flag:
 				plt.cla()
@@ -1380,6 +1401,7 @@ class EH_SWAP:
 			savemat(os.path.join(tPath, file_name),
 					{"ff_sweep": ff_sweep_abs, "sig_amp": sig_amp.T, "sig_phase": sig_phase.T,
 					 "tau_sweep": tau_sweep_abs})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
 
 			if plot_flag:
 				plt.cla()
@@ -1389,7 +1411,6 @@ class EH_SWAP:
 				plt.ylabel("interaction time (ns)")
 
 		return machine, ff_sweep_abs, tau_sweep_abs, sig_amp.T
-
 
 
 class EH_exp2D:

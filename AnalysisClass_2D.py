@@ -67,7 +67,7 @@ class AH_exp2D:
 		"""
 		# define init_guess for the fitting
 		if init_guess is None:
-			wr = np.min(res_freq_sweep)  # Resonator frequency
+			wr = np.min(res_freq_sweep) / u.MHz  # Resonator frequency
 			Ec = 170.0  # Capacitive energy
 			Ej = 30.0E3  # Inductive energy
 			c = 0.05  # Period in cosine function for flux
@@ -95,7 +95,7 @@ class AH_exp2D:
 		plt.pcolormesh(np.linspace(np.min(dc_flux_sweep), np.max(dc_flux_sweep), np.size(dc_flux_sweep)),
 					   np.linspace(np.min(res_freq_sweep),
 								   np.max(res_freq_sweep),
-								   np.size(res_freq_sweep)) / 1e6,
+								   np.size(res_freq_sweep)) / u.MHz,
 					   sig.T, shading="nearest", cmap="seismic")
 		plt.xlabel("DC flux level [V]")
 		plt.ylabel("Frequency [MHz]")
