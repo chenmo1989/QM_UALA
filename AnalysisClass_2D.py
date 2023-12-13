@@ -68,7 +68,7 @@ class AH_exp2D:
 		# define init_guess for the fitting
 		if init_guess is None:
 			wr = np.min(res_freq_sweep) / u.MHz  # Resonator frequency
-			Ec = 170.0  # Capacitive energy
+			Ec = 180.0  # Capacitive energy
 			Ej = 30.0E3  # Inductive energy
 			c = 0.05  # Period in cosine function for flux
 			phi0 = 0.4  # Offset in cosine function for flux

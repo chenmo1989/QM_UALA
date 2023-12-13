@@ -210,6 +210,5 @@ class ExperimentHandle:
 		config = build_config(machine)
 		qm = qmm.open_qm(config)
 		qm.octave.set_clock("octave1", clock_mode=ClockMode.External_10MHz)
-		qm.octave.set_clock("octave1", ClockType.External_10MHz)
 		qmm.close()
 		return

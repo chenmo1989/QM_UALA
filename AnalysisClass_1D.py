@@ -247,7 +247,15 @@ class AH_exp1D:
 			def __fit_fun(t, A, T1, c):
 				return A * np.exp(-t / T1) + c
 
-		param, _ = curve_fit(__fit_fun, tau_sweep, sig_amp, p0=[max(sig_amp) - min(sig_amp), 4E3, min(sig_amp)])
+		sig = min(sig_amp) + (max(sig_amp) - min(sig_amp)) / np.exp(1)
+		for i, v in enumerate(sig_amp):
+			if sig < v:
+				T1_y = v
+			else:
+				pass
+		T1_g = tau_sweep[np.where(sig_amp == T1_y)][0]
+
+		param, _ = curve_fit(__fit_fun, tau_sweep, sig_amp, p0=[max(sig_amp) - min(sig_amp), T1_g, min(sig_amp)])
 
 		if plot_flag == True:
 			fig = plt.figure()
