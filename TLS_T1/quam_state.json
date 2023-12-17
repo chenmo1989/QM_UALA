@@ -1,543 +1,79 @@
 {
-  "qubits": [{
-      "name": "q0",
-      "f_01": 6421662970.0,
-      "f_tls": [6421749542.0,6167842315.0],
-      "lo": 6471662970.0,
-      "rf_gain": 0,
-      "rf_switch_mode": "on",
-      "mixer_name": "octave_octave1_2",
-      "anharmonicity": 174848520.0,
-      "drag_coefficient": 0.0,
-      "ac_stark_detuning": 0.0,
-      "x180_length": 180,
-      "x180_amp": 0.25,
-      "pi_length": [40,80],
-      "pi_length_tls": [200],
-      "pi_amp": [0.0508274,0.0213884],
-      "pi_amp_tls": [1.0],
-      "T1": 4342,
-      "T2": 123,
-      "tuning_curve": [-3363.766314205999,0.0,-6690.529605028814,0.0,6425.791423768482],
-      "digital_marker": {
-        "delay": 87,
-        "buffer": 18
-      },
-      "wiring": {
-        "controller": "con1",
-        "I": 3,
-        "Q": 4,
-        "digital_marker": 3
-      }
-    },{
-      "name": "q1",
-      "f_01": 6289000000.0,
-      "f_tls": [6289000000.0],
-      "lo": 6389000000.0,
-      "rf_gain": 0,
-      "rf_switch_mode": "on",
-      "mixer_name": "octave_octave1_2",
-      "anharmonicity": 250000000.0,
-      "drag_coefficient": 0.0,
-      "ac_stark_detuning": 0.0,
-      "x180_length": 40,
-      "x180_amp": 0.25,
-      "pi_length": [100],
-      "pi_length_tls": [],
-      "pi_amp": [0.25],
-      "pi_amp_tls": [],
-      "T1": 1230,
-      "T2": 123,
-      "tuning_curve": [0.0,0.0,0.0],
-      "digital_marker": {
-        "delay": 87,
-        "buffer": 18
-      },
-      "wiring": {
-        "controller": "con1",
-        "I": 3,
-        "Q": 4,
-        "digital_marker": 3
-      }
-    },{
-      "name": "q2",
-      "f_01": 6071518959.0,
-      "f_tls": [6071518959.0],
-      "lo": 6121518959.0,
-      "rf_gain": 0,
-      "rf_switch_mode": "on",
-      "mixer_name": "octave_octave1_2",
-      "anharmonicity": 147889333.0,
-      "drag_coefficient": 0.0,
-      "ac_stark_detuning": 0.0,
-      "x180_length": 40,
-      "x180_amp": 0.25,
-      "pi_length": [40,80],
-      "pi_length_tls": [],
-      "pi_amp": [0.0698584,0.0304794],
-      "pi_amp_tls": [],
-      "T1": 3732,
-      "T2": 123,
-      "tuning_curve": [-2234.3090391,0.0,-6601.86579843,0.0,6080.73594276],
-      "digital_marker": {
-        "delay": 87,
-        "buffer": 18
-      },
-      "wiring": {
-        "controller": "con1",
-        "I": 3,
-        "Q": 4,
-        "digital_marker": 3
-      }
-    },{
-      "name": "q3",
-      "f_01": 5934849169.0,
-      "f_tls": [5942254046.0],
-      "lo": 5984849169.0,
-      "rf_gain": 0,
-      "rf_switch_mode": "on",
-      "mixer_name": "octave_octave1_2",
-      "anharmonicity": 250000000.0,
-      "drag_coefficient": 0.0,
-      "ac_stark_detuning": 0.0,
-      "x180_length": 40,
-      "x180_amp": 0.25,
-      "pi_length": [40],
-      "pi_length_tls": [],
-      "pi_amp": [0.0800637],
-      "pi_amp_tls": [],
-      "T1": 1230,
-      "T2": 123,
-      "tuning_curve": [-176.66431891501114,-430.91092560551846,5705.360290467492],
-      "digital_marker": {
-        "delay": 87,
-        "buffer": 18
-      },
-      "wiring": {
-        "controller": "con1",
-        "I": 3,
-        "Q": 4,
-        "digital_marker": 3
-      }
-    },{
-      "name": "q4",
-      "f_01": 5729295048.0,
-      "f_tls": [5729295048.0],
-      "lo": 5779295048.0,
-      "rf_gain": 0,
-      "rf_switch_mode": "on",
-      "mixer_name": "octave_octave1_2",
-      "anharmonicity": 250000000.0,
-      "drag_coefficient": 0.0,
-      "ac_stark_detuning": 0.0,
-      "x180_length": 40,
-      "x180_amp": 0.25,
-      "pi_length": [40],
-      "pi_length_tls": [],
-      "pi_amp": [0.0464527],
-      "pi_amp_tls": [],
-      "T1": 1809,
-      "T2": 123,
-      "tuning_curve": [-2605.6896378526085,0,-5863.732265634086,0,5730.250752928366],
-      "digital_marker": {
-        "delay": 87,
-        "buffer": 18
-      },
-      "wiring": {
-        "controller": "con1",
-        "I": 3,
-        "Q": 4,
-        "digital_marker": 3
-      }
-    },{
-      "name": "q5",
-      "f_01": 5567000000.0,
-      "f_tls": [5567000000.0],
-      "lo": 5667000000.0,
-      "rf_gain": 0,
-      "rf_switch_mode": "on",
-      "mixer_name": "octave_octave1_2",
-      "anharmonicity": 250000000.0,
-      "drag_coefficient": 0.0,
-      "ac_stark_detuning": 0.0,
-      "x180_length": 40,
-      "x180_amp": 0.25,
-      "pi_length": [100],
-      "pi_length_tls": [],
-      "pi_amp": [0.25],
-      "pi_amp_tls": [],
-      "T1": 1230,
-      "T2": 123,
-      "tuning_curve": [0.0,0.0,0.0],
-      "digital_marker": {
-        "delay": 87,
-        "buffer": 18
-      },
-      "wiring": {
-        "controller": "con1",
-        "I": 3,
-        "Q": 4,
-        "digital_marker": 3
-      }
-    },{
-      "name": "q6",
-      "f_01": 5442000000.0,
-      "f_tls": [5442000000.0],
-      "lo": 5542000000.0,
-      "rf_gain": 0,
-      "rf_switch_mode": "on",
-      "mixer_name": "octave_octave1_2",
-      "anharmonicity": 250000000.0,
-      "drag_coefficient": 0.0,
-      "ac_stark_detuning": 0.0,
-      "x180_length": 40,
-      "x180_amp": 0.25,
-      "pi_length": [100],
-      "pi_length_tls": [],
-      "pi_amp": [0.25],
-      "pi_amp_tls": [],
-      "T1": 1230,
-      "T2": 123,
-      "tuning_curve": [0.0,0.0,0.0],
-      "digital_marker": {
-        "delay": 87,
-        "buffer": 18
-      },
-      "wiring": {
-        "controller": "con1",
-        "I": 3,
-        "Q": 4,
-        "digital_marker": 3
-      }
-    }],
-  "flux_lines": [{
-      "name": "flux0",
-      "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.25,
-      "max_frequency_point": 0.06940285302970237,
-      "Z_delay": 19,
-      "dc_voltage": 0.0,
-      "iswap": {
-        "length": [26],
-        "level": [0.1965]
-      },
-      "wiring": {
-        "controller": "con1",
-        "port": 7,
-        "filter": {
-          "iir_taps": [],
-          "fir_taps": []
-        }
-      }
-    },{
-      "name": "flux1",
-      "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.25,
-      "max_frequency_point": 0.0,
-      "Z_delay": 19,
-      "dc_voltage": 0.0,
-      "iswap": {
-        "length": [],
-        "level": []
-      },
-      "wiring": {
-        "controller": "con1",
-        "port": 8,
-        "filter": {
-          "iir_taps": [],
-          "fir_taps": []
-        }
-      }
-    },{
-      "name": "flux2",
-      "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.25,
-      "max_frequency_point": -0.7718048828803227,
-      "Z_delay": 19,
-      "dc_voltage": 0.0,
-      "iswap": {
-        "length": [18,25],
-        "level": [0.22,0.434]
-      },
-      "wiring": {
-        "controller": "con1",
-        "port": 9,
-        "filter": {
-          "iir_taps": [],
-          "fir_taps": []
-        }
-      }
-    },{
-      "name": "flux3",
-      "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.25,
-      "max_frequency_point": -1.2195754305452566,
-      "Z_delay": 19,
-      "dc_voltage": 0.0,
-      "iswap": {
-        "length": [],
-        "level": []
-      },
-      "wiring": {
-        "controller": "con1",
-        "port": 10,
-        "filter": {
-          "iir_taps": [],
-          "fir_taps": []
-        }
-      }
-    },{
-      "name": "flux4",
-      "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.25,
-      "max_frequency_point": -0.11182622452935694,
-      "Z_delay": 19,
-      "dc_voltage": -0.11134553052244611,
-      "iswap": {
-        "length": [21],
-        "level": [0.339]
-      },
-      "wiring": {
-        "controller": "con1",
-        "port": 7,
-        "filter": {
-          "iir_taps": [],
-          "fir_taps": []
-        }
-      }
-    },{
-      "name": "flux5",
-      "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.25,
-      "max_frequency_point": 0.0,
-      "Z_delay": 19,
-      "dc_voltage": 0.0,
-      "iswap": {
-        "length": [],
-        "level": []
-      },
-      "wiring": {
-        "controller": "con1",
-        "port": 8,
-        "filter": {
-          "iir_taps": [],
-          "fir_taps": []
-        }
-      }
-    },{
-      "name": "flux6",
-      "flux_pulse_length": 16,
-      "flux_pulse_amp": 0.25,
-      "max_frequency_point": 0.0,
-      "Z_delay": 19,
-      "dc_voltage": 0.0,
-      "iswap": {
-        "length": [],
-        "level": []
-      },
-      "wiring": {
-        "controller": "con1",
-        "port": 9,
-        "filter": {
-          "iir_taps": [],
-          "fir_taps": []
-        }
-      }
-    }],
-  "resonators": [{
-      "name": "r0",
-      "f_readout": 7260663478.0,
-      "lo": 7310663478.0,
-      "rf_gain": 0,
-      "rf_switch_mode": "on",
-      "depletion_time": 10000,
-      "readout_pulse_length": 500,
-      "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.5,
-      "rotation_angle": 0.0,
-      "ge_threshold": 0.0,
-      "RO_attenuation": [32.0,10.0],
-      "TWPA": [6324000000.0,-10],
-      "tuning_curve": [7255.847792671296,191.18761913388335,28656.65909733081,0.07669865740269421,-0.03286196327107682,78.99424925653291],
-      "digital_marker": {
-        "delay": 85,
-        "buffer": 20
-      },
-      "wiring": {
-        "controller": "con1",
-        "I": 1,
-        "Q": 2,
-        "digital_marker": 1
-      }
-    },{
-      "name": "r1",
-      "f_readout": 7130000000.0,
-      "lo": 7180000000.0,
-      "rf_gain": 0,
-      "rf_switch_mode": "on",
-      "depletion_time": 10000,
-      "readout_pulse_length": 500,
-      "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.5,
-      "rotation_angle": 0.0,
-      "ge_threshold": 0.0,
-      "RO_attenuation": [38.0,10],
-      "TWPA": [6324000000.0,-10.0],
-      "tuning_curve": [0.0,0.0,0.0,0.0,0.0,0.0],
-      "digital_marker": {
-        "delay": 85,
-        "buffer": 20
-      },
-      "wiring": {
-        "controller": "con1",
-        "I": 1,
-        "Q": 2,
-        "digital_marker": 1
-      }
-    },{
-      "name": "r2",
-      "f_readout": 7004093575.0,
-      "lo": 7054093575.0,
-      "rf_gain": 0,
-      "rf_switch_mode": "on",
-      "depletion_time": 10000,
-      "readout_pulse_length": 500,
-      "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.5,
-      "rotation_angle": 0.0,
-      "ge_threshold": 0.0,
-      "RO_attenuation": [38.0,10],
-      "TWPA": [6324000000.0,-10.0],
-      "tuning_curve": [6998.07918535759,178.55249252059778,27464.725642301026,0.07530334857254598,0.3954021708176726,75.63746099519773],
-      "digital_marker": {
-        "delay": 85,
-        "buffer": 20
-      },
-      "wiring": {
-        "controller": "con1",
-        "I": 1,
-        "Q": 2,
-        "digital_marker": 1
-      }
-    },{
-      "name": "r3",
-      "f_readout": 6880581343.0,
-      "lo": 6930581343.0,
-      "rf_gain": 0,
-      "rf_switch_mode": "on",
-      "depletion_time": 10000,
-      "readout_pulse_length": 500,
-      "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.5,
-      "rotation_angle": 0.0,
-      "ge_threshold": 0.0,
-      "RO_attenuation": [36.0,10],
-      "TWPA": [6324000000.0,-10.0],
-      "tuning_curve": [6874.328552916121,157.45585301668584,27913.925604171764,0.05448737376750215,0.4175268517008163,80.13650963387046],
-      "digital_marker": {
-        "delay": 85,
-        "buffer": 20
-      },
-      "wiring": {
-        "controller": "con1",
-        "I": 1,
-        "Q": 2,
-        "digital_marker": 1
-      }
-    },{
-      "name": "r4",
-      "f_readout": 6225892408.0,
-      "lo": 6275892408.0,
-      "rf_gain": 0,
-      "rf_switch_mode": "on",
-      "depletion_time": 10000,
-      "readout_pulse_length": 500,
-      "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.5,
-      "rotation_angle": 0.0,
-      "ge_threshold": 0.0,
-      "RO_attenuation": [40.0,10],
-      "TWPA": [6730600000.0,-11.3],
-      "tuning_curve": [6215.366180358719,164.31522950630264,25063.45378564108,0.07825354155724294,0.06178596150013448,82.8803040678426],
-      "digital_marker": {
-        "delay": 85,
-        "buffer": 20
-      },
-      "wiring": {
-        "controller": "con1",
-        "I": 1,
-        "Q": 2,
-        "digital_marker": 1
-      }
-    },{
-      "name": "r5",
-      "f_readout": 6112000000.0,
-      "lo": 6162000000.0,
-      "rf_gain": 0,
-      "rf_switch_mode": "on",
-      "depletion_time": 10000,
-      "readout_pulse_length": 500,
-      "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.5,
-      "rotation_angle": 0.0,
-      "ge_threshold": 0.0,
-      "RO_attenuation": [42.0,10],
-      "TWPA": [6730600000.0,-11.3],
-      "tuning_curve": [0.0,0.0,0.0,0.0,0.0,0.0],
-      "digital_marker": {
-        "delay": 85,
-        "buffer": 20
-      },
-      "wiring": {
-        "controller": "con1",
-        "I": 1,
-        "Q": 2,
-        "digital_marker": 1
-      }
-    },{
-      "name": "r6",
-      "f_readout": 6018000000.0,
-      "lo": 6068000000.0,
-      "rf_gain": 0,
-      "rf_switch_mode": "on",
-      "depletion_time": 10000,
-      "readout_pulse_length": 500,
-      "optimal_pulse_length": 2000,
-      "readout_pulse_amp": 0.5,
-      "rotation_angle": 0.0,
-      "ge_threshold": 0.0,
-      "RO_attenuation": [40.0,10],
-      "TWPA": [6730600000.0,-11.3],
-      "tuning_curve": [0.0,0.0,0.0,0.0,0.0,0.0],
-      "digital_marker": {
-        "delay": 85,
-        "buffer": 20
-      },
-      "wiring": {
-        "controller": "con1",
-        "I": 1,
-        "Q": 2,
-        "digital_marker": 1
-      }
-    }],
-  "network": {
-    "qop_ip": "192.168.88.254",
-    "octave1_ip": "192.168.88.179",
-    "qop_port": 80,
-    "octave_port": 80,
-    "cluster_name": "DF5",
-    "save_dir": ""
-  },
-  "global_parameters": {
-    "time_of_flight": 304,
-    "saturation_amp": 0.1,
-    "saturation_len": 14000,
-    "con1_downconversion_offset_I": 0.06700700000000002,
-    "con1_downconversion_offset_Q": 0.084921,
-    "con1_downconversion_gain": 0,
-    "con2_downconversion_offset_I": 0.0,
-    "con2_downconversion_offset_Q": 0.0,
-    "con2_downconversion_gain": 0,
-    "RO_delay": 0
-  }
+  "qubits[].name": ["q0","q1","q2","q3","q4","q5","q6"],
+  "qubits[].f_01": [6412237738.0,6289000000.0,5495997170.0,5934849169.0,5729295048.0,5567000000.0,5442000000.0],
+  "qubits[].f_tls": [[6412237738.0],[6289000000.0],[6080094895.0],[5942254046.0],[5729295048.0],[5567000000.0],[5442000000.0]],
+  "qubits[].lo": [6512237738.0,6389000000.0,5205997170.0,5984849169.0,5779295048.0,5667000000.0,5542000000.0],
+  "qubits[].rf_gain": [0,0,0,0,0,0,0],
+  "qubits[].rf_switch_mode": ["on","on","on","on","on","on","on"],
+  "qubits[].mixer_name": ["octave_octave1_2","octave_octave1_2","octave_octave1_2","octave_octave1_2","octave_octave1_2","octave_octave1_2","octave_octave1_2"],
+  "qubits[].anharmonicity": [250000000.0,250000000.0,158658069.0,250000000.0,250000000.0,250000000.0,250000000.0],
+  "qubits[].drag_coefficient": [0.0,0.0,0.0,0.0,0.0,0.0,0.0],
+  "qubits[].ac_stark_detuning": [0.0,0.0,0.0,0.0,0.0,0.0,0.0],
+  "qubits[].x180_length": [40,40,40,40,40,40,40],
+  "qubits[].x180_amp": [0.1,0.1,0.1,0.1,0.1,0.1,0.1],
+  "qubits[].pi_length": [[40,80],[40,80],[40,64],[40,80],[40,80],[40,80],[40,80]],
+  "qubits[].pi_amp": [[0.05,0.02],[0.05,0.02],[0.0569383,0.0304318],[0.05,0.02],[0.05,0.02],[0.05,0.02],[0.05,0.02]],
+  "qubits[].pi_length_tls": [[200],[200],[200],[200],[200],[200],[200]],
+  "qubits[].pi_amp_tls": [[0.2],[0.2],[0.2],[0.2],[0.2],[0.2],[0.2]],
+  "qubits[].T1": [209,1230,3406,1230,1809,1230,1230],
+  "qubits[].T2": [123,123,123,123,123,123,123],
+  "qubits[].DC_tuning_curve": [[0.0,0.0,0.0],[0.0,0.0,0.0],[4.117130558391531,13.169787386892722,-275.7776625181675,-473.5199611482423,5883.032041355874],[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0]],
+  "qubits[].AC_tuning_curve": [[0.0,0.0,0.0],[0.0,0.0,0.0],[-6662.9771983731125,0.0,-5986.416039882059,3.4874425344855553e-12,6077.443765406763],[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0]],
+  "qubits[].digital_marker.delay": [87,87,87,87,87,87,87],
+  "qubits[].digital_marker.buffer": [15,15,15,15,15,15,15],
+  "qubits[].wiring.controller": ["con1","con1","con1","con1","con1","con1","con1"],
+  "qubits[].wiring.I": [3,3,3,3,3,3,3],
+  "qubits[].wiring.Q": [4,4,4,4,4,4,4],
+  "qubits[].wiring.digital_marker": [3,3,3,3,3,3,3],
+  "qubits[]_len": 7,
+  "flux_lines[].name": ["flux0","flux1","flux2","flux3","flux4","flux5","flux6"],
+  "flux_lines[].flux_pulse_length": [16,16,16,16,16,16,16],
+  "flux_lines[].flux_pulse_amp": [0.25,0.25,0.25,0.25,0.25,0.25,0.25],
+  "flux_lines[].max_frequency_point": [-0.7037063083798434,0.0,-0.8265962344495962,-1.2195754305452566,-0.11182622452935694,0.0,0.0],
+  "flux_lines[].Z_delay": [19,19,19,19,19,19,19],
+  "flux_lines[].dc_voltage": [0.0,0.0,-0.8265962344495962,0.0,0.0,0.0,0.0],
+  "flux_lines[].iswap.length": [[16],[16],[16],[16],[16],[16],[16]],
+  "flux_lines[].iswap.level": [[0.2],[0.2],[0.2],[0.2],[0.2],[0.2],[0.2]],
+  "flux_lines[].wiring.controller": ["con1","con1","con1","con1","con1","con1","con1"],
+  "flux_lines[].wiring.port": [7,8,9,10,7,8,9],
+  "flux_lines[].wiring.filter.iir_taps": [[],[],[],[],[],[],[]],
+  "flux_lines[].wiring.filter.fir_taps": [[],[],[],[],[],[],[]],
+  "flux_lines[]_len": 7,
+  "resonators[].name": ["r0","r1","r2","r3","r4","r5","r6"],
+  "resonators[].f_readout": [7262217900.0,7130000000.0,7003986365.0,6880581343.0,6225892408.0,6112000000.0,6018000000.0],
+  "resonators[].lo": [7312217900.0,7180000000.0,7053986365.0,6930581343.0,6275892408.0,6162000000.0,6068000000.0],
+  "resonators[].rf_gain": [0,0,0,0,0,0,0],
+  "resonators[].rf_switch_mode": ["on","on","on","on","on","on","on"],
+  "resonators[].depletion_time": [10000,10000,10000,10000,10000,10000,10000],
+  "resonators[].readout_pulse_length": [500,500,500,500,500,500,500],
+  "resonators[].optimal_pulse_length": [2000,2000,2000,2000,2000,2000,2000],
+  "resonators[].readout_pulse_amp": [0.5,0.5,0.5,0.5,0.5,0.5,0.5],
+  "resonators[].rotation_angle": [0.0,0.0,0.0,0.0,0.0,0.0,0.0],
+  "resonators[].ge_threshold": [0.0,0.0,0.0,0.0,0.0,0.0,0.0],
+  "resonators[].RO_attenuation": [[32.0,10.0],[38.0,10],[38.0,10],[36.0,10],[40.0,10],[42.0,10],[40.0,10]],
+  "resonators[].TWPA": [[6324000000.0,-10.0],[6324000000.0,-10.0],[6324000000.0,-10.0],[6324000000.0,-10.0],[6730600000.0,-11.3],[6730600000.0,-11.3],[6730600000.0,-11.3]],
+  "resonators[].tuning_curve": [[7255.700397601558,173.62772028090544,28916.122345658725,0.0740156280423785,0.3272613678234565,85.14311761680233],[0.0,0.0,0.0,0.0,0.0,0.0],[6997.942427893899,168.65129349126482,28307.379016143863,0.07155658442044682,0.38878502477607463,77.4553962196867],[6874.328552916121,157.45585301668584,27913.925604171764,0.05448737376750215,0.4175268517008163,80.13650963387046],[6215.366180358719,164.31522950630264,25063.45378564108,0.07825354155724294,0.06178596150013448,82.8803040678426],[0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0]],
+  "resonators[].digital_marker.delay": [87,87,87,87,87,87,87],
+  "resonators[].digital_marker.buffer": [15,15,15,15,15,15,15],
+  "resonators[].wiring.controller": ["con1","con1","con1","con1","con1","con1","con1"],
+  "resonators[].wiring.I": [1,1,1,1,1,1,1],
+  "resonators[].wiring.Q": [2,2,2,2,2,2,2],
+  "resonators[].wiring.digital_marker": [1,1,1,1,1,1,1],
+  "resonators[]_len": 7,
+  "network.qop_ip": "192.168.88.254",
+  "network.octave1_ip": "192.168.88.179",
+  "network.qop_port": 80,
+  "network.octave_port": 80,
+  "network.cluster_name": "DF5",
+  "network.save_dir": "",
+  "global_parameters.time_of_flight": 304,
+  "global_parameters.saturation_amp": 0.1,
+  "global_parameters.saturation_len": 14000,
+  "global_parameters.con1_downconversion_offset_I": 0.026225000000000026,
+  "global_parameters.con1_downconversion_offset_Q": 0.03371099999999999,
+  "global_parameters.con1_downconversion_gain": 0,
+  "global_parameters.con2_downconversion_offset_I": 0.0,
+  "global_parameters.con2_downconversion_offset_Q": 0.0,
+  "global_parameters.con2_downconversion_gain": 0,
+  "global_parameters.RO_delay": 0
 }

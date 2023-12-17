@@ -2,7 +2,7 @@
   "qubits": [{
       "name": "q0",
       "f_01": 6567349000.0,
-      "f_tls": [],
+      "f_tls": [6567349000.0],
       "lo": 6617349000.0,
       "rf_gain": 0,
       "rf_switch_mode": "on",
@@ -10,18 +10,19 @@
       "anharmonicity": 250000000.0,
       "drag_coefficient": 0.0,
       "ac_stark_detuning": 0.0,
-      "x180_length": 180,
-      "x180_amp": 0.25,
-      "pi_length": [100],
-      "pi_length_tls": [],
-      "pi_amp": [0.25],
-      "pi_amp_tls": [],
+      "x180_length": 40,
+      "x180_amp": 0.1,
+      "pi_length": [40,80],
+      "pi_amp": [0.05,0.02],
+      "pi_length_tls": [200],
+      "pi_amp_tls": [0.2],
       "T1": 1230,
       "T2": 123,
-      "tuning_curve": [0.0,0.0,0.0],
+      "DC_tuning_curve": [0.0,0.0,0.0],
+      "AC_tuning_curve": [0.0,0.0,0.0],
       "digital_marker": {
-        "delay": 0,
-        "buffer": 0
+        "delay": 87,
+        "buffer": 15
       },
       "wiring": {
         "controller": "con1",
@@ -38,8 +39,8 @@
       "Z_delay": 19,
       "dc_voltage": 0.0,
       "iswap": {
-        "length": [],
-        "level": []
+        "length": [16],
+        "level": [0.2]
       },
       "wiring": {
         "controller": "con1",
@@ -66,8 +67,8 @@
       "TWPA": [6324000000.0,-10.0],
       "tuning_curve": [0.0,0.0,0.0,0.0,0.0,0.0],
       "digital_marker": {
-        "delay": 0,
-        "buffer": 0
+        "delay": 87,
+        "buffer": 15
       },
       "wiring": {
         "controller": "con1",

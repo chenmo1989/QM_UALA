@@ -48,7 +48,7 @@ class AnalysisHandle:
 		return machine
 
 	def set_machine(self,machine):
-		machine._save("quam_state.json",flat_data = False)
+		machine._save("quam_state.json")
 		return machine
 
 	def update_machine_qubit_frequency(self,machine,qubit_index,new_freq):
@@ -67,11 +67,14 @@ class AnalysisHandle:
 		machine.resonators[qubit_index].f_readout += new_freq
 		return machine
 
-	def update_analysis_tuning_curve(self,qubit_index,res_index,flux_index,ham_param = None, poly_param = None):
+	def update_analysis_tuning_curve(self,qubit_index,res_index,flux_index,ham_param = None, poly_param = None,is_DC_curve = True):
 		if ham_param is None:
 			self.ham_param = self.get_machine().resonators[res_index].tuning_curve
 		if poly_param is None:
-			self.poly_param = self.get_machine().qubits[qubit_index].tuning_curve
+			if is_DC_curve:
+				self.poly_param = self.get_machine().qubits[qubit_index].DC_tuning_curve
+			else:
+				self.poly_param = self.get_machine().qubits[qubit_index].AC_tuning_curve
 		return
 
 	def get_sweept_spot(self,poly_param = None):

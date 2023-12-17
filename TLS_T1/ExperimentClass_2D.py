@@ -471,7 +471,7 @@ class EH_Rabi:
 		config = build_config(machine)
 
 		if poly_param is None:
-			poly_param = machine.qubits[qubit_index].tuning_curve
+			poly_param = machine.qubits[qubit_index].DC_tuning_curve
 		if ham_param is None:
 			ham_param = machine.resonators[res_index].tuning_curve
 
@@ -622,13 +622,14 @@ class EH_Rabi:
 			machine = QuAM("quam_state.json") # this "machine" object is going to be changed by a lot, do not rely on it too much
 		config = build_config(machine)
 
-		if poly_param is None:
-			poly_param = machine.qubits[qubit_index].tuning_curve
-
 		ff_sweep = ff_sweep_abs / machine.flux_lines[flux_index].flux_pulse_amp
 		if ff_to_dc_ratio is None:
+			if poly_param is None:
+				poly_param = machine.qubits[qubit_index].AC_tuning_curve
 			qubit_freq_est_sweep = np.polyval(poly_param, ff_sweep_abs) * 1E6 # Hz
 		else:
+			if poly_param is None:
+				poly_param = machine.qubits[qubit_index].DC_tuning_curve
 			qubit_freq_est_sweep = np.polyval(poly_param, (ff_to_dc_ratio * ff_sweep_abs) + machine.flux_lines[flux_index].max_frequency_point) * 1E6 # Hz
 		qubit_freq_est_sweep = np.round(qubit_freq_est_sweep)
 
@@ -862,7 +863,7 @@ class EH_Rabi:
 		config = build_config(machine)
 
 		if poly_param is None:
-			poly_param = np.array(machine.qubits[qubit_index].tuning_curve[:])
+			poly_param = np.array(machine.qubits[qubit_index].AC_tuning_curve[:])
 
 		# sort qubit_freq_sweep from small to large, for later use of searchsorted
 		qubit_freq_sweep = np.sort(np.floor(qubit_freq_sweep)) # floor, to avoid larger than max freq situation
@@ -1040,7 +1041,7 @@ class EH_Rabi:
 		config = build_config(machine)
 
 		if poly_param is None:
-			poly_param = machine.qubits[qubit_index].tuning_curve
+			poly_param = machine.qubits[qubit_index].AC_tuning_curve
 
 		ff_sweep = ff_sweep_abs / machine.flux_lines[flux_index].flux_pulse_amp
 		if ff_to_dc_ratio is None:

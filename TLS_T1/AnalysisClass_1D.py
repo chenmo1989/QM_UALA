@@ -283,9 +283,9 @@ class AH_exp1D:
 		"""
 		if method == "ramsey":
 			def __fit_fun(t, A, T2star, n, det, phi, c, offset):
-				return A * np.exp(-(t / T2star)**n) * (np.cos(t*2*np.pi*det+phi) + c) + offset
+				return A * np.exp(-(t / T2star) ** n) * (np.cos(t * 2 * np.pi * det + phi) + c) + offset
 
-		delta = abs(x[0] - x[1]) / u.s
+		delta = abs(x[0] - x[1])
 		Fs = 1 / delta  # Sampling frequency
 		L = np.size(x)
 		NFFT = int(2 * 2 ** self.next_power_of_2(L))
@@ -295,25 +295,24 @@ class AH_exp1D:
 		index = np.argmax(DataY)
 		det = Freq[index]
 		amp = abs(max(y) - min(y)) / 2
-		init_guess = [amp, 5E-7, 1, det, 0, 0, min(y)]
+		init_guess = [amp, 500, 1, det, 0, 0, min(y)]
 
 		popt, _ = curve_fit(lambda x, *guess: __fit_fun(x, *guess),
-							xdata=x/u.s, ydata=y, p0=init_guess, check_finite="true")
+							xdata=x, ydata=y, p0=init_guess, check_finite="true")
 
 		if plot_flag == True:
 			fig = plt.figure()
 			plt.rcParams['figure.figsize'] = [6, 3]
 			plt.cla()
-			plt.plot(x / u.ns, y, '.')
-			plt.plot(x / u.ns,
-					 __fit_fun(x / u.s, popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6]), 'r')
+			plt.plot(x, y, '.')
+			plt.plot(x, __fit_fun(x, popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6]), 'r')
 			plt.title("qubit Ramsey")
 			plt.xlabel("tau [ns]")
 			plt.ylabel("Signal [V]")
-			print('Qubit T2* [ns]:', popt[1] *1E9)
-			print('Detuning [MHz]:', popt[3] / 1E6)
-			print('Exponent:', popt[2])
-		return popt[1] *1E9
+			print('Qubit T2* [ns]:', popt[1])
+			print('Detuning [MHz]:', popt[3] * 1E3)
+			print('Exponent n:', popt[2])
+		return popt[1]
 
 	def next_power_of_2(self,x):
 		return 0 if x == 0 else math.ceil(math.log2(x))

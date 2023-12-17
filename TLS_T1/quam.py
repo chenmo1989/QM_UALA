@@ -69,12 +69,13 @@ class Qubit(QuamComponent):
     x180_length: int
     x180_amp: float
     pi_length: List[Union[str, int, float, bool, list]]
-    pi_length_tls: List[Union[str, int, float, bool, list]]
     pi_amp: List[Union[str, int, float, bool, list]]
+    pi_length_tls: List[Union[str, int, float, bool, list]]
     pi_amp_tls: List[Union[str, int, float, bool, list]]
     T1: int
     T2: int
-    tuning_curve: List[Union[str, int, float, bool, list]]
+    DC_tuning_curve: List[Union[str, int, float, bool, list]]
+    AC_tuning_curve: List[Union[str, int, float, bool, list]]
     digital_marker: Digital_marker
     wiring: Wiring
     

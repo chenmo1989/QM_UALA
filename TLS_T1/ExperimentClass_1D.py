@@ -1091,7 +1091,7 @@ class EH_Rabi:
 
 		uses the iswap defined in machine.flux_lines[flux_index].iswap.length/level[TLS_index]
 		the TLS driving pulse is a square wave, with duration = machine.qubits[qubit_index].pi_length_tls[TLS_index],
-		 amplitude = machine.qubits[qubit_index].pi_amp_tls[TLS_index] * 0.25 V
+		 amplitude = machine.qubits[qubit_index].pi_amp_tls[TLS_index]
 
 		Args:
 			TLS_freq_sweep ():
@@ -1131,10 +1131,6 @@ class EH_Rabi:
 		TLS_if_sweep = TLS_freq_sweep - qubit_lo
 		TLS_if_sweep = np.round(TLS_if_sweep)
 
-		# TLS pi pulse
-		TLS_pi_length = machine.qubits[qubit_index].pi_length_tls[TLS_index]
-		TLS_pi_amp = machine.qubits[qubit_index].pi_amp_tls[TLS_index] # note this is relative amp!
-		TLS_pi_rel = TLS_pi_amp * pi_amp_rel
 		# fLux pulse baking for SWAP
 		swap_length = machine.flux_lines[flux_index].iswap.length[TLS_index]
 		swap_amp = machine.flux_lines[flux_index].iswap.level[TLS_index]
@@ -1171,7 +1167,10 @@ class EH_Rabi:
 			with for_(n, 0, n < n_avg, n+1):
 				with for_(*from_array(df,TLS_if_sweep)):
 					update_frequency(machine.qubits[qubit_index].name, df)
-					play('cw' * amp(TLS_pi_rel), machine.qubits[qubit_index].name, duration = TLS_pi_length * u.ns)
+					if pi_amp_rel==1.0:
+						play('pi_tls', machine.qubits[qubit_index].name)
+					else:
+						play('pi_tls' * amp(pi_amp_rel), machine.qubits[qubit_index].name)
 					align()
 					square_TLS_swap[0].run()
 					align()
@@ -1294,9 +1293,6 @@ class EH_Rabi:
 			rabi_duration_sweep = rabi_duration_sweep[rabi_duration_sweep>3]
 		rabi_duration_sweep = rabi_duration_sweep.astype(int)
 
-		# TLS pi pulse
-		TLS_pi_amp = machine.qubits[qubit_index].pi_amp_tls[TLS_index] # note this is relative amp!
-		TLS_pi_rel = TLS_pi_amp * pi_amp_rel
 		# fLux pulse baking for SWAP
 		swap_length = machine.flux_lines[flux_index].iswap.length[TLS_index]
 		swap_amp = machine.flux_lines[flux_index].iswap.level[TLS_index]
@@ -1318,7 +1314,10 @@ class EH_Rabi:
 
 			with for_(n, 0, n < n_avg, n+1):
 				with for_(*from_array(t,rabi_duration_sweep)):
-					play('cw' * amp(TLS_pi_rel), machine.qubits[qubit_index].name, duration = t) # clock cycles
+					if pi_amp_rel==1.0:
+						play('pi_tls', machine.qubits[qubit_index].name, duration = t) # clock cycles
+					else:
+						play('pi_tls' * amp(pi_amp_rel), machine.qubits[qubit_index].name, duration = t) # clock cycles
 					align()
 					square_TLS_swap[0].run()
 					align()
@@ -1444,11 +1443,6 @@ class EH_Rabi:
 			print("ef if range < 20MHz")
 			return None
 
-		if len(machine.qubits[qubit_index].pi_length) > 1:
-			ef_pi_length = machine.qubits[qubit_index].pi_length[1]
-		if len(machine.qubits[qubit_index].pi_amp) > 1:
-			pi_amp_rel_ef = machine.qubits[qubit_index].pi_amp[1]/machine.qubits[qubit_index].pi_amp[0] * pi_amp_rel_ef
-
 		with program() as ef_freq_prog:
 			[I,Q,n,I_st,Q_st,n_st] = declare_vars()
 			df = declare(int)
@@ -1459,7 +1453,7 @@ class EH_Rabi:
 					align(machine.qubits[qubit_index].name, machine.flux_lines[flux_index].name,
 						  machine.resonators[res_index].name)
 					update_frequency(machine.qubits[qubit_index].name, df)
-					play('pi'*amp(pi_amp_rel_ef), machine.qubits[qubit_index].name, duration = ef_pi_length * u.ns)
+					play('pi_ef' * amp(pi_amp_rel_ef), machine.qubits[qubit_index].name)
 					if readout_state == 'g':
 						update_frequency(machine.qubits[qubit_index].name, qubit_if)
 						play('pi'*amp(pi_amp_rel), machine.qubits[qubit_index].name)
@@ -1587,9 +1581,6 @@ class EH_Rabi:
 			print("ef if < 20MHz")
 			return None
 
-		if len(machine.qubits[qubit_index].pi_amp) > 1:
-			pi_amp_rel_ef = machine.qubits[qubit_index].pi_amp[1]/machine.qubits[qubit_index].pi_amp[0] * pi_amp_rel_ef
-
 		with program() as time_rabi_ef:
 			[I, Q, n, I_st, Q_st, n_st] = declare_vars()
 			t = declare(int)
@@ -1601,7 +1592,7 @@ class EH_Rabi:
 					align(machine.qubits[qubit_index].name, machine.flux_lines[flux_index].name,
 						  machine.resonators[res_index].name)
 					update_frequency(machine.qubits[qubit_index].name, ef_if)
-					play('pi'*amp(pi_amp_rel_ef), machine.qubits[qubit_index].name, duration=t)
+					play('pi_ef' * amp(pi_amp_rel_ef), machine.qubits[qubit_index].name, duration=t) # clock cycle
 					if readout_state == 'g':
 						update_frequency(machine.qubits[qubit_index].name, qubit_if)
 						play('pi'*amp(pi_amp_rel), machine.qubits[qubit_index].name)
@@ -1712,10 +1703,7 @@ class EH_Rabi:
 
 		qubit_if = machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].lo
 		rabi_amp_sweep_abs = rabi_amp_sweep_rel * machine.qubits[qubit_index].pi_amp[1] # actual rabi amplitude
-		rabi_amp_sweep_rel = rabi_amp_sweep_abs / machine.qubits[qubit_index].pi_amp[0]
 		ef_if = machine.qubits[qubit_index].f_01 - machine.qubits[qubit_index].anharmonicity - machine.qubits[qubit_index].lo
-		if len(machine.qubits[qubit_index].pi_length) > 1:
-			ef_pi_length = machine.qubits[qubit_index].pi_length[1]
 
 		if abs(qubit_if) > 350E6:
 			print("qubit if > 350MHz")
@@ -1741,7 +1729,7 @@ class EH_Rabi:
 					align(machine.qubits[qubit_index].name, machine.flux_lines[flux_index].name,
 						  machine.resonators[res_index].name)
 					update_frequency(machine.qubits[qubit_index].name, ef_if)
-					play('pi' * amp(a), machine.qubits[qubit_index].name, duration = ef_pi_length * u.ns)
+					play('pi_ef' * amp(a), machine.qubits[qubit_index].name)
 					if readout_state == 'g':
 						update_frequency(machine.qubits[qubit_index].name, qubit_if)
 						play('pi' * amp(pi_amp_rel), machine.qubits[qubit_index].name)
@@ -1872,9 +1860,6 @@ class EH_Rabi:
 			print("ef if < 20MHz")
 			return None
 
-		if len(machine.qubits[qubit_index].pi_amp) > 1:
-			pi_amp_rel_ef = machine.qubits[qubit_index].pi_amp[1] / machine.qubits[qubit_index].pi_amp[0] * pi_amp_rel_ef
-
 		with program() as time_rabi_ef_thermal:
 			[I, Q, n, I_st, Q_st, n_st] = declare_vars()
 			t = declare(int)
@@ -1882,7 +1867,7 @@ class EH_Rabi:
 			with for_(n, 0, n < n_avg, n + 1):
 				with for_(*from_array(t, rabi_duration_sweep)):
 					update_frequency(machine.qubits[qubit_index].name, ef_if)
-					play('pi'*amp(pi_amp_rel_ef), machine.qubits[qubit_index].name, duration=t)
+					play('pi_ef' * amp(pi_amp_rel_ef), machine.qubits[qubit_index].name, duration=t)
 					if readout_state == 'g':
 						update_frequency(machine.qubits[qubit_index].name, qubit_if)
 						play('pi'*amp(pi_amp_rel), machine.qubits[qubit_index].name)
@@ -2359,8 +2344,6 @@ class EH_SWAP:
 		if f_str_datetime is None:
 			f_str_datetime = self.update_str_datetime()
 
-		ff_amp_rel = machine.flux_lines[flux_index].iswap.level[TLS_index] / machine.flux_lines[flux_index].flux_pulse_amp
-
 		tau_sweep_cc = tau_sweep_abs // 4  # in clock cycles
 		tau_sweep_cc = np.unique(tau_sweep_cc)
 		tau_sweep = tau_sweep_cc.astype(int)  # clock cycles
@@ -2380,12 +2363,12 @@ class EH_SWAP:
 				with for_(*from_array(t, tau_sweep)):
 					play("pi", machine.qubits[qubit_index].name)
 					align()
-					play("const" * amp(ff_amp_rel), machine.flux_lines[flux_index].name, duration=t)
+					play("iswap", machine.flux_lines[flux_index].name, duration=t)
 					align()
 					readout_avg_macro(machine.resonators[res_index].name,I,Q)
 					align()
 					wait(50)
-					play("const" * amp(-ff_amp_rel), machine.flux_lines[flux_index].name, duration=t)
+					play("iswap" * amp(-1), machine.flux_lines[flux_index].name, duration=t)
 					save(I, I_st)
 					save(Q, Q_st)
 					wait(cd_time * u.ns, machine.resonators[res_index].name)

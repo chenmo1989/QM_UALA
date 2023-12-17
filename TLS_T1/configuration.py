@@ -254,6 +254,9 @@ def build_config(quam: QuAM):
                         "cw": "const_pulse",
                         "pi": f"pi_pulse{i}",
                         "pi2": f"pi_over_two_pulse{i}",
+                        "pi_ef": f"pi_pulse_ef{i}",
+                        "pi2_ef": f"pi_over_two_pulse_ef{i}",
+                        "pi_tls": f"pi_pulse_tls{i}",
                         "x180": f"x180_pulse{i}",
                         "x90": f"x90_pulse{i}",
                         "-x90": f"-x90_pulse{i}",
@@ -271,6 +274,7 @@ def build_config(quam: QuAM):
                     },
                     "operations": {
                         "const": f"const_flux_pulse{i}",
+                        "iswap": f"iswap_pulse{i}",
                     },
                 }
                 for i in range(len(quam.flux_lines))
@@ -291,6 +295,16 @@ def build_config(quam: QuAM):
                     "length": quam.flux_lines[i].flux_pulse_length,
                     "waveforms": {
                         "single": f"const_flux{i}_wf",
+                    },
+                }
+                for i in range(len(quam.flux_lines))
+            },
+            **{
+                f"iswap_pulse{i}": {
+                    "operation": "control",
+                    "length": quam.flux_lines[i].iswap.length[0],
+                    "waveforms": {
+                        "single": f"iswap_pulse{i}_wf",
                     },
                 }
                 for i in range(len(quam.flux_lines))
@@ -336,6 +350,42 @@ def build_config(quam: QuAM):
                     "length": quam.qubits[i].pi_length[0],
                     "waveforms": {
                         "I": f"pi_over_two_wf{i}",
+                        "Q": "zero_wf",
+                    },
+                    "digital_marker": "ON",
+                }
+                for i in range(len(quam.qubits))
+            },
+            **{
+                f"pi_pulse_ef{i}": {
+                    "operation": "control",
+                    "length": quam.qubits[i].pi_length[1],
+                    "waveforms": {
+                        "I": f"pi_ef_wf{i}",
+                        "Q": "zero_wf",
+                    },
+                    "digital_marker": "ON",
+                }
+                for i in range(len(quam.qubits))
+            },
+            **{
+                f"pi_over_two_pulse_ef{i}": {
+                    "operation": "control",
+                    "length": quam.qubits[i].pi_length[1],
+                    "waveforms": {
+                        "I": f"pi_over_two_ef_wf{i}",
+                        "Q": "zero_wf",
+                    },
+                    "digital_marker": "ON",
+                }
+                for i in range(len(quam.qubits))
+            },
+            **{
+                f"pi_pulse_tls{i}": {
+                    "operation": "control",
+                    "length": quam.qubits[i].pi_length_tls[0],
+                    "waveforms": {
+                        "I": f"pi_tls_wf{i}",
                         "Q": "zero_wf",
                     },
                     "digital_marker": "ON",
@@ -423,6 +473,10 @@ def build_config(quam: QuAM):
                 for i in range(len(quam.flux_lines))
             },
             **{
+                f"iswap_pulse{i}_wf": {"type": "constant", "sample": quam.flux_lines[i].iswap.level[0]}
+                for i in range(len(quam.flux_lines))
+            },
+            **{
                 f"readout{i}_wf": {"type": "constant", "sample": quam.resonators[i].readout_pulse_amp}
                 for i in range(len(quam.resonators))
             },
@@ -432,6 +486,18 @@ def build_config(quam: QuAM):
             },
             **{
                 f"pi_over_two_wf{i}": {"type": "constant", "sample": quam.qubits[i].pi_amp[0]/2}
+                for i in range(len(quam.qubits))
+            },
+            **{
+                f"pi_ef_wf{i}": {"type": "constant", "sample": quam.qubits[i].pi_amp[1]}
+                for i in range(len(quam.qubits))
+            },
+            **{
+                f"pi_over_two_ef_wf{i}": {"type": "constant", "sample": quam.qubits[i].pi_amp[1] / 2}
+                for i in range(len(quam.qubits))
+            },
+            **{
+                f"pi_tls_wf{i}": {"type": "constant", "sample": quam.qubits[i].pi_amp_tls[0]}
                 for i in range(len(quam.qubits))
             },
             **{f"x90_I_wf{i}": {"type": "arbitrary", "samples": x90_I_wf[i].tolist()} for i in range(len(quam.qubits))},
