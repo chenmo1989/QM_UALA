@@ -872,7 +872,10 @@ class EH_Rabi:
 		ff_sweep_abs = []
 		for freq_tmp in qubit_freq_sweep:
 			sol_tmp = np.roots(poly_param - np.array([0, 0, 0, 0, freq_tmp/1E6]))
-			sol_tmp = max(np.real(sol_tmp[np.isreal(sol_tmp)]))
+			if np.sum(np.isreal(sol_tmp))==4: # four real solutions, take the smaller positive one
+				sol_tmp = min(np.real(sol_tmp[sol_tmp>0]))
+			else: # two real and two complex solutions, take the positive real value
+				sol_tmp = max(np.real(sol_tmp[np.isreal(sol_tmp)]))
 			ff_sweep_abs.append(sol_tmp)
 		ff_sweep_abs = np.array(ff_sweep_abs)
 		if max(abs(ff_sweep_abs)) > 0.5:
@@ -1349,7 +1352,8 @@ class EH_SWAP:
 						save(I, I_st)
 						save(Q, Q_st)
 						align()
-						wait(50)
+						wait(cd_time * u.ns, machine.resonators[res_index].name)
+						align()
 						with switch_(segment):
 							for j in range(min_pulse_duration,max_pulse_duration+1,dt_pulse_duration):
 								with case_(j):
