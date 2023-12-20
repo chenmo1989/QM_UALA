@@ -188,7 +188,7 @@ class AH_exp1D:
 	def rabi_length(self, x, y, method = "time_rabi", plot_flag = True):
 		"""
 		this function fits a single oscillatory curve to a cosine, typically used for a rabi oscillation
-		note x is in units of clock cycle! There is a factor of 4 in the plots and the output!
+		note x is in units of ns. The translation from clock cycle is already done in the output of ExperimentClass
 		:param x: x data--for time_rabi, it is ns not clock cycle!
 		:param y: y data
 		:param method: "time_rabi" (default), finds the pi pulse lengths, in ns; "power_rabi", finds the amp for pi pulse
@@ -270,11 +270,11 @@ class AH_exp1D:
 
 		return param[1]
 
-	def ramsey_vr(self, x, y, method = "ramsey", plot_flag = True):
+	def ramsey(self, x, y, method = "ramsey", plot_flag = True):
 		"""
 		this function fits the resulting data to a cosine multiplied by an exponential decay (to a power) function
-		note x is in units of clock cycle! There is a factor of 4 in the plots and the output!
-		:param x: x data--for ramsey_vr, it is ns not clock cycle!
+		note x is in units of ns. The translation from clock cycle is already done in the output of ExperimentClass
+		:param x: x data--for ramsey, it is ns not clock cycle!
 		:param y: y data
 		:param method: "ramsey"
 		:param plot_flag:

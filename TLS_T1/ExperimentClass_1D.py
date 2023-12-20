@@ -2714,12 +2714,11 @@ class EH_Ramsey:
 		self.update_tPath = ref_to_update_tPath
 		self.update_str_datetime = ref_to_update_str_datetime
 
-	def ramsey_virtual_rotation(self, ramsey_duration_sweep, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, n_avg = 1E3, detuning = 1E6, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+	def ramsey(self, ramsey_duration_sweep, qubit_index, res_index, flux_index, pi_amp_rel = 1.0, n_avg = 1E3, detuning = 1E6, cd_time = 10E3, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
 		"""
-		qubit Ramsey in 1D with virtual Z rotation
-		sequence given by pi/2 - wait - pi/2 fro various wait times
+		qubit Ramsey in 1D. Detuning realized by tuning the phase of second pi/2 pulse
+		sequence given by pi/2 - wait - pi/2 for various wait times
 		the frame of the last pi/2 pulse is rotated rather than using qubit detuning
-
 
 		:param ramsey_duration_sweep: in clock cycles!
 		:param qubit_index:
@@ -2727,7 +2726,7 @@ class EH_Ramsey:
 		:param flux_index:
 		:param pi_amp_rel:
 		:param n_avg:
-		:param detuning: effective detuning that is transformed into a virtual z rotation
+		:param detuning: effective detuning, in unit of Hz!
 		:param cd_time:
 		:param tPath:
 		:param f_str_datetime:
@@ -2753,6 +2752,7 @@ class EH_Ramsey:
 			machine = QuAM("quam_state.json")
 		config = build_config(machine)
 		ramsey_duration_sweep = ramsey_duration_sweep.astype(int)
+		phi_sweep = detuning * 1E-9 * ramsey_duration_sweep * 4 # in units of 2*pi
 
 		with program() as ramsey_vr:
 			[I, Q, n, I_st, Q_st, n_st] = declare_vars()
@@ -2760,8 +2760,7 @@ class EH_Ramsey:
 			phi = declare(fixed) # for virtual z rotation
 
 			with for_(n, 0, n < n_avg, n + 1):
-				with for_(*from_array(t, ramsey_duration_sweep)):
-					assign(phi, Cast.mul_fixed_by_int(detuning * 1e-9, 4 * t))
+				with for_each_((t, phi), (ramsey_duration_sweep, phi_sweep)):
 					with strict_timing_():
 						play("pi2" * amp(pi_amp_rel), machine.qubits[qubit_index].name)
 						wait(t, machine.qubits[qubit_index].name)
@@ -2809,7 +2808,7 @@ class EH_Ramsey:
 				progress_counter(iteration, n_avg, start_time=results.get_start_time())
 				if plot_flag == True:
 					plt.cla()
-					plt.title("Ramsey with detuning = %i Hz" %detuning)
+					plt.title("Ramsey with detuning = %i MHz" %detuning/1E6)
 					plt.plot(ramsey_duration_sweep * 4, sig_amp, "b.")
 					plt.xlabel("tau [ns]")
 					plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
@@ -2825,7 +2824,7 @@ class EH_Ramsey:
 			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
 
 			# save data
-			exp_name = 'ramsey_vr'
+			exp_name = 'ramsey'
 			qubit_name = 'Q' + str(qubit_index + 1)
 			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
 			file_name = f_str + '.mat'

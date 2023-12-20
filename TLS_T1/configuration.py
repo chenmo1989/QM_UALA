@@ -274,7 +274,6 @@ def build_config(quam: QuAM):
                     },
                     "operations": {
                         "const": f"const_flux_pulse{i}",
-                        "iswap": f"iswap_pulse{i}",
                     },
                 }
                 for i in range(len(quam.flux_lines))
@@ -295,16 +294,6 @@ def build_config(quam: QuAM):
                     "length": quam.flux_lines[i].flux_pulse_length,
                     "waveforms": {
                         "single": f"const_flux{i}_wf",
-                    },
-                }
-                for i in range(len(quam.flux_lines))
-            },
-            **{
-                f"iswap_pulse{i}": {
-                    "operation": "control",
-                    "length": quam.flux_lines[i].iswap.length[0],
-                    "waveforms": {
-                        "single": f"iswap_pulse{i}_wf",
                     },
                 }
                 for i in range(len(quam.flux_lines))
@@ -470,10 +459,6 @@ def build_config(quam: QuAM):
             "const_wf": {"type": "constant", "sample": 0.25},
             **{
                 f"const_flux{i}_wf": {"type": "constant", "sample": quam.flux_lines[i].flux_pulse_amp}
-                for i in range(len(quam.flux_lines))
-            },
-            **{
-                f"iswap_pulse{i}_wf": {"type": "constant", "sample": quam.flux_lines[i].iswap.level[0]}
                 for i in range(len(quam.flux_lines))
             },
             **{
