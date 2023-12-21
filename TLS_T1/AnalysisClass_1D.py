@@ -4,22 +4,19 @@ AnalysisHandle
 written by Mo Chen in Oct. 2023
 """
 from qm.qua import *
-from qm.QuantumMachinesManager import QuantumMachinesManager
-from qm import SimulationConfig, LoopbackInterface
+from qm import SimulationConfig, LoopbackInterface, generate_qua_script,QuantumMachinesManager
 from qm.octave import *
 from qm.octave.octave_manager import ClockMode
 from configuration import *
 from scipy import signal
-from qm import SimulationConfig
 from qualang_tools.bakery import baking
 from qualang_tools.units import unit
-from qm import generate_qua_script
 from qm.octave import QmOctaveConfig
 from set_octave import ElementsSettings, octave_settings
 from quam import QuAM
 from scipy.io import savemat
 from scipy.io import loadmat
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, minimize
 from scipy.signal import savgol_filter
 from qutip import *
 from typing import Union
@@ -191,13 +188,17 @@ class AH_exp1D:
 		note x is in units of ns. The translation from clock cycle is already done in the output of ExperimentClass
 		:param x: x data--for time_rabi, it is ns not clock cycle!
 		:param y: y data
-		:param method: "time_rabi" (default), finds the pi pulse lengths, in ns; "power_rabi", finds the amp for pi pulse
+		:param method: "time_rabi" (default), finds the pi pulse lengths, in ns; "power_rabi", finds the amp for pi pulse; "decaying_time_rabi", "decaying_power_rabi" will have an additional exp decay term
 		:param plot_flag:
 		Return:
 			fitted pi pulse length
 		"""
-		def __fit_fun(x, c0, c1, c2, c3):
-			return c2+ c1*np.cos(x*2*np.pi*c0+c3)
+		if method[0:5] == "decay":
+			def __fit_fun(x, c0, c1, c2, c3, c4):
+				return c2 + c1 * np.cos(x * 2 * np.pi * c0 + c3) * np.exp(-x/c4)
+		else:
+			def __fit_fun(x, c0, c1, c2, c3):
+				return c2+ c1*np.cos(x*2*np.pi*c0+c3)
 
 		delta = abs(x[0] - x[1])
 		Fs = 1 / delta  # Sampling frequency
@@ -212,6 +213,11 @@ class AH_exp1D:
 		init_guess = [rabi, amp, (max(y) + min(y))/2, -np.pi]
 		LB = [0.5 * rabi, 0.0, -1, -6]
 		UB = [2 * rabi, 5*amp, 1, 6]
+
+		if method[0:5] == "decay":
+			init_guess.append(x[-1])
+			LB.append(x[-1]/1E3)
+			UB.append(x[-1]*1E3)
 
 		popt, _ = curve_fit(lambda x, *guess: __fit_fun(x, *guess),
 							xdata=x, ydata=y, p0=init_guess, check_finite="true", bounds=(LB, UB))
@@ -233,11 +239,25 @@ class AH_exp1D:
 				plt.title("qubit rabi")
 				plt.xlabel("rabi amplitude [V]")
 				plt.ylabel("Signal [V]")
-		if method == "time_rabi":
+			elif method == "decaying_time_rabi":
+				plt.plot(x, y, '.')  # in ns
+				plt.plot(x, __fit_fun(x, popt[0], popt[1], popt[2], popt[3], popt[4]), 'r')
+				plt.title("decaying qubit rabi")
+				plt.xlabel("tau [ns]")
+				plt.ylabel("Signal [V]")
+				print(f"T2rabi: {(popt[4]):.1f} ns")
+			elif method == "decaying_power_rabi":
+				plt.plot(x, y, '.')  # in V
+				plt.plot(x, __fit_fun(x, popt[0], popt[1], popt[2], popt[3], popt[4]), 'r')
+				plt.title("decaying qubit rabi")
+				plt.xlabel("rabi amplitude [V]")
+				plt.ylabel("Signal [V]")
+
+		if method[-9:] == "time_rabi":
 			print(f"rabi_pi_pulse: {(-popt[3]) / popt[0] / 2 / np.pi:.1f} ns")
 			print(f"half period: {1 / 2 / popt[0]:.2f} ns")
 			return np.round((-popt[3]) / popt[0] / 2 / np.pi)
-		elif method == "power_rabi":
+		elif method[-9:] == "ower_rabi":
 			print(f"rabi_pi_pulse_amp: {(-popt[3]) / popt[0] / 2 / np.pi:.5f} V")
 			print(f"half period: {1 / 2 / popt[0]:.7f} V")
 			return np.round((-popt[3]) / popt[0] / 2 / np.pi, decimals = 7)
@@ -313,6 +333,142 @@ class AH_exp1D:
 			print('Detuning [MHz]:', popt[3] * 1E3)
 			print('Exponent n:', popt[2])
 		return popt[1]
+
+	def two_state_discriminator(self, Ig, Qg, Ie, Qe, plot_flag = True, print_flag = True):
+		"""
+		Given two blobs in the IQ plane representing two states, finds the optimal threshold to discriminate between them
+		and calculates the fidelity. Also returns the angle in which the data needs to be rotated in order to have all the
+		information in the `I` (`X`) axis.
+
+		.. note::
+			This function assumes that there are only two blobs in the IQ plane representing two states (ground and excited)
+			Unexpected output will be returned in other cases.
+
+
+		:param float Ig: A vector containing the `I` quadrature of data points in the ground state
+		:param float Qg: A vector containing the `Q` quadrature of data points in the ground state
+		:param float Ie: A vector containing the `I` quadrature of data points in the excited state
+		:param float Qe: A vector containing the `Q` quadrature of data points in the excited state
+		:param bool plot_flag: When true (default), plot the results
+		:param bool print_flag: When true (default), print the results
+		:returns: A tuple of (angle, threshold, fidelity, gg, ge, eg, ee).
+			angle - The angle (in radians) in which the IQ plane has to be rotated in order to have all the information in
+				the `I` axis.
+			threshold - The threshold in the rotated `I` axis. The excited state will be when the `I` is larger (>) than
+				the threshold.
+			fidelity - The fidelity for discriminating the states.
+			gg - The matrix element indicating a state prepared in the ground state and measured in the ground state.
+			ge - The matrix element indicating a state prepared in the ground state and measured in the excited state.
+			eg - The matrix element indicating a state prepared in the excited state and measured in the ground state.
+			ee - The matrix element indicating a state prepared in the excited state and measured in the excited state.
+		"""
+
+		# Condition to have the Q equal for both states:
+		angle = np.arctan2(np.mean(Qe) - np.mean(Qg), np.mean(Ig) - np.mean(Ie))
+		C = np.cos(angle)
+		S = np.sin(angle)
+		# Condition for having e > Ig
+		if np.mean((Ig - Ie) * C - (Qg - Qe) * S) > 0:
+			angle += np.pi
+			C = np.cos(angle)
+			S = np.sin(angle)
+
+		Ig_rotated = Ig * C - Qg * S
+		Qg_rotated = Ig * S + Qg * C
+
+		Ie_rotated = Ie * C - Qe * S
+		Qe_rotated = Ie * S + Qe * C
+
+		fit = minimize(
+			self._false_detections,
+			0.5 * (np.mean(Ig_rotated) + np.mean(Ie_rotated)),
+			(Ig_rotated, Ie_rotated),
+			method="Nelder-Mead",
+		)
+		threshold = fit.x[0]
+
+		gg = np.sum(Ig_rotated < threshold) / len(Ig_rotated)
+		ge = np.sum(Ig_rotated > threshold) / len(Ig_rotated)
+		eg = np.sum(Ie_rotated < threshold) / len(Ie_rotated)
+		ee = np.sum(Ie_rotated > threshold) / len(Ie_rotated)
+
+		fidelity = 100 * (gg + ee) / 2
+
+		if print_flag == True:
+			# print out the confusion matrix
+			print(
+				f"""
+			Fidelity Matrix:
+			-----------------
+			| {gg:.3f} | {ge:.3f} |
+			----------------
+			| {eg:.3f} | {ee:.3f} |
+			-----------------
+			IQ plane rotated by: {180 / np.pi * angle:.1f}{chr(176)}
+			Threshold: {threshold:.3e}
+			Fidelity: {fidelity:.1f}%
+			"""
+			)
+
+		if plot_flag:
+			fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+			plt.rcParams['figure.figsize'] = [9, 8]
+			ax1.plot(Ig, Qg, ".", alpha=0.1, label="Ground", markersize=3)
+			ax1.plot(Ie, Qe, ".", alpha=0.1, label="Excited", markersize=3)
+			ax1.axis("equal")
+			ax1.legend(["Ground", "Excited"])
+			ax1.set_xlabel("I")
+			ax1.set_ylabel("Q")
+			ax1.set_title("Original Data")
+			ax1.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2), fancybox=True, shadow=True, ncol=5,
+					   markerscale=5)
+
+			ax2.plot(Ig_rotated, Qg_rotated, ".", alpha=0.1, label="Ground", markersize=3)
+			ax2.plot(Ie_rotated, Qe_rotated, ".", alpha=0.1, label="Excited", markersize=3)
+			ax2.axis("equal")
+			ax2.set_xlabel("I")
+			ax2.set_ylabel("Q")
+			ax2.set_title("Rotated Data")
+			ax2.legend(["Ground", "Excited"])
+			ax2.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2), fancybox=True, shadow=True, ncol=5,
+					   markerscale=5)
+
+			ax3.hist(Ig_rotated, bins=50, alpha=0.75, label="Ground")
+			ax3.hist(Ie_rotated, bins=50, alpha=0.75, label="Excited")
+			ax3.axvline(x=threshold, color="k", ls="--", alpha=0.5)
+			text_props = dict(
+				horizontalalignment="center",
+				verticalalignment="center",
+				transform=ax3.transAxes,
+			)
+			ax3.text(0.7, 0.9, f"Threshold:\n {threshold:.3e}", text_props)
+			ax3.set_xlabel("I")
+			ax3.set_ylabel("Counts")
+			ax3.set_title("1D Histogram")
+
+			ax4.imshow(np.array([[gg, ge], [eg, ee]]))
+			ax4.set_xticks([0, 1])
+			ax4.set_yticks([0, 1])
+			ax4.set_xticklabels(labels=["|g>", "|e>"])
+			ax4.set_yticklabels(labels=["|g>", "|e>"])
+			ax4.set_ylabel("Prepared")
+			ax4.set_xlabel("Measured")
+			ax4.text(0, 0, f"{100 * gg:.1f}%", ha="center", va="center", color="k")
+			ax4.text(1, 0, f"{100 * ge:.1f}%", ha="center", va="center", color="w")
+			ax4.text(0, 1, f"{100 * eg:.1f}%", ha="center", va="center", color="w")
+			ax4.text(1, 1, f"{100 * ee:.1f}%", ha="center", va="center", color="k")
+			ax4.set_title("Fidelities")
+			fig.tight_layout()
+			fig.subplots_adjust(hspace=.5)
+			plt.show()
+		return angle, threshold, fidelity, gg, ge, eg, ee
+
+	def _false_detections(self, threshold, Ig, Ie):
+		if np.mean(Ig) < np.mean(Ie):
+			false_detections_var = np.sum(Ig > threshold) + np.sum(Ie < threshold)
+		else:
+			false_detections_var = np.sum(Ig < threshold) + np.sum(Ie > threshold)
+		return false_detections_var
 
 	def next_power_of_2(self,x):
 		return 0 if x == 0 else math.ceil(math.log2(x))

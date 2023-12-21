@@ -167,11 +167,27 @@ def readout_avg_macro(res_name: str, I=None, Q=None, I_st=None, Q_st=None):
     :return: Three QUA variables populated with the results of the readout: (`I`, `Q`, `I_st', `Q_st')
     """
     measure(
-        "readout" * amp(1),
+        "readout",
         res_name,
         None,
         dual_demod.full("cos", "out1", "sin", "out2", I),
         dual_demod.full("minus_sin", "out1", "cos", "out2", Q),
+    )
+    return I, Q
+
+def readout_rotated_macro(res_name: str, I=None, Q=None, I_st=None, Q_st=None):
+    """
+    A macro for performing the readout over averages
+    use rotated angles, make sure this is calibrated using IQ blobs.
+    plot only I if using with this rotated readout
+    :return: Three QUA variables populated with the results of the readout: (`I`, `Q`, `I_st', `Q_st')
+    """
+    measure(
+        "readout",
+        res_name,
+        None,
+        dual_demod.full("rotated_cos", "out1", "rotated_sin", "out2", I),
+        dual_demod.full("rotated_minus_sin", "out1", "rotated_cos", "out2", Q),
     )
     return I, Q
 
