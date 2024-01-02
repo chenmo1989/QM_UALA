@@ -3892,7 +3892,7 @@ class EH_Ramsey:
 			machine = QuAM("quam_state.json")
 		config = build_config(machine)
 		ramsey_duration_sweep = ramsey_duration_sweep.astype(int)
-		phi_sweep = detuning * 1E-9 * ramsey_duration_sweep * 4 # in units of 2*pi
+		phi_sweep = (detuning * 1E-9 * ramsey_duration_sweep * 4) % 1 # in units of 2*pi
 
 		with program() as ramsey_vr:
 			[I, Q, n, I_st, Q_st, n_st] = declare_vars()
@@ -4018,7 +4018,7 @@ class EH_Ramsey:
 			machine = QuAM("quam_state.json")
 		config = build_config(machine)
 		ramsey_duration_sweep = ramsey_duration_sweep.astype(int)
-		phi_sweep = detuning * 1E-9 * ramsey_duration_sweep * 4 # in units of 2*pi
+		phi_sweep = (detuning * 1E-9 * ramsey_duration_sweep * 4) % 1 # in units of 2*pi
 
 		# fLux pulse baking for SWAP
 		swap_length = machine.flux_lines[flux_index].iswap.length[TLS_index]
