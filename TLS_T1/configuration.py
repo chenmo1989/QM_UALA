@@ -289,6 +289,7 @@ def build_config(quam: QuAM):
                     "I": "const_wf",
                     "Q": "zero_wf",
                 },
+                "digital_marker": "ON",
             },
             **{
                 f"const_flux_pulse{i}": {

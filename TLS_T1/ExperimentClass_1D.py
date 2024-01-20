@@ -4437,7 +4437,6 @@ class EH_DD:
 
 			return machine, tau_sweep * 4, I
 
-
 class EH_exp1D:
 	"""
 	Class for running 1D experiments

@@ -67,7 +67,7 @@ class AnalysisHandle:
 		machine.resonators[qubit_index].f_readout += new_freq
 		return machine
 
-	def update_analysis_tuning_curve(self,qubit_index,res_index,flux_index,ham_param = None, poly_param = None,is_DC_curve = True):
+	def update_analysis_tuning_curve(self,qubit_index,res_index,flux_index,ham_param = None, poly_param = None,is_DC_curve = False):
 		if ham_param is None:
 			self.ham_param = self.get_machine().resonators[res_index].tuning_curve
 		if poly_param is None:

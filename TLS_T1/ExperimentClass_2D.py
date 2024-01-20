@@ -415,6 +415,99 @@ class EH_RR:
 		client.close()
 		return machine, res_freq_sweep, dc_flux_sweep, sig_amp
 
+	def rr_pulse_optimize(self, res_duration_sweep_abs, res_amp_sweep, qubit_index, res_index, flux_index, n_avg=1E3, cd_time=20E3, tPath=None,
+							f_str_datetime=None, simulate_flag=False, simulation_len=1000, plot_flag=True, machine=None):
+
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+
+		res_amp_sweep_rel = res_amp_sweep / 0.25 # 0.25 is the amplitude of "cw" pulse/"const_wf"
+		res_duration_sweep_cc = res_duration_sweep_abs // 4  # in clock cycles
+		res_duration_sweep_cc = np.unique(res_duration_sweep_cc)
+		res_duration_sweep = res_duration_sweep_cc.astype(int)  # clock cycles
+		res_duration_sweep_abs = res_duration_sweep * 4  # time in ns
+
+		config = build_config(machine)
+
+		with program() as rr_pulse_optimize:
+			[I,Q,n,I_st,Q_st,n_st] = declare_vars()
+			t = declare(int)
+			da = declare(fixed)
+
+			with for_(n, 0, n < n_avg, n + 1):
+				with for_(*from_array(t, res_duration_sweep)):
+					with for_(*from_array(da, res_amp_sweep_rel)):
+						play("pi", machine.qubits[qubit_index].name)
+						align()
+						play("cw" * amp(da), machine.resonators[res_index].name, duration=t)
+						align()
+						readout_avg_macro(machine.resonators[res_index].name, I, Q)
+						save(I, I_st)
+						save(Q, Q_st)
+						wait(cd_time * u.ns, machine.resonators[res_index].name)
+				save(n, n_st)
+
+			with stream_processing():
+				# for the progress counter
+				n_st.save("iteration")
+				I_st.buffer(len(res_amp_sweep_rel)).buffer(len(res_duration_sweep)).average().save("I")
+				Q_st.buffer(len(res_amp_sweep_rel)).buffer(len(res_duration_sweep)).average().save("Q")
+
+		#####################################
+		#  Open Communication with the QOP  #
+		#####################################
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port='9510', octave=octave_config, log_level="ERROR")
+
+		if simulate_flag:
+			simulation_config = SimulationConfig(duration=simulation_len)
+			job = qmm.simulate(config, rr_pulse_optimize, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			qm = qmm.open_qm(config)
+			job = qm.execute(rr_pulse_optimize)
+			results = fetching_tool(job, ["I", "Q", "iteration"], mode="live")
+
+			if plot_flag:
+				fig = plt.figure()
+				plt.rcParams['figure.figsize'] = [8, 4]
+				interrupt_on_close(fig, job)
+
+			while results.is_processing():
+				I, Q, iteration = results.fetch_all()
+				progress_counter(iteration, n_avg, start_time=results.get_start_time())
+				time.sleep(0.1)
+
+			I, Q, _ = results.fetch_all()
+			I = u.demod2volts(I, machine.resonators[qubit_index].readout_pulse_length)
+			Q = u.demod2volts(Q, machine.resonators[qubit_index].readout_pulse_length)
+			sig_amp = np.sqrt(I ** 2 + Q ** 2)
+			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+
+			# save data
+			exp_name = 'res_pulse_optimize'
+			qubit_name = 'Q' + str(qubit_index + 1)
+			f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+			file_name = f_str + '.mat'
+			json_name = f_str + '_state.json'
+			savemat(os.path.join(tPath, file_name),
+					{"res_amp_sweep": res_amp_sweep, "sig_amp": sig_amp, "sig_phase": sig_phase,
+					 "res_duration_sweep": res_duration_sweep_abs})
+			machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+			if plot_flag:
+				plt.cla()
+				plt.pcolor(res_amp_sweep, res_duration_sweep_abs, sig_amp, cmap="seismic")
+				plt.colorbar()
+				plt.xlabel("res amp (V)")
+				plt.ylabel("res pulse duration (ns)")
+
+			return machine, res_amp_sweep, res_duration_sweep_abs, sig_amp
+
 class EH_Rabi:
 	"""
 	class in ExperimentHandle, for qubit Rabi related 2D experiments
