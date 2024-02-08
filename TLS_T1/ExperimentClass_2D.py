@@ -417,7 +417,30 @@ class EH_RR:
 
 	def rr_pulse_optimize(self, res_duration_sweep_abs, res_amp_sweep, qubit_index, res_index, flux_index, n_avg=1E3, cd_time=20E3, tPath=None,
 							f_str_datetime=None, simulate_flag=False, simulation_len=1000, plot_flag=True, machine=None):
+		"""
+		characterize QND during readout pulse, find the optimal readout amp and duration
+		pi pulse -- variable readout pulse -- readout
+		Args:
+			res_duration_sweep_abs ():
+			res_amp_sweep ():
+			qubit_index ():
+			res_index ():
+			flux_index ():
+			n_avg ():
+			cd_time ():
+			tPath ():
+			f_str_datetime ():
+			simulate_flag ():
+			simulation_len ():
+			plot_flag ():
+			machine ():
 
+		Returns:
+			machine
+			res_amp_sweep: 1D
+			res_duration_sweep_abs: 1D
+			sig_amp: 2D
+		"""
 		if tPath is None:
 			tPath = self.update_tPath()
 		if f_str_datetime is None:
@@ -486,7 +509,7 @@ class EH_RR:
 			I = u.demod2volts(I, machine.resonators[qubit_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[qubit_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'res_pulse_optimize'
@@ -1335,7 +1358,7 @@ class EH_SWAP:
 			I = u.demod2volts(I, machine.resonators[qubit_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[qubit_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'SWAP'
@@ -1488,7 +1511,7 @@ class EH_SWAP:
 			I = u.demod2volts(I, machine.resonators[qubit_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[qubit_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'SWAP'

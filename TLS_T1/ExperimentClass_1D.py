@@ -239,8 +239,7 @@ class EH_RR: # sub
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I**2 + Q**2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'RR_freq'
@@ -1446,8 +1445,7 @@ class EH_Rabi:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I**2 + Q**2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'freq'
@@ -1558,8 +1556,7 @@ class EH_Rabi:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'time_rabi'
@@ -1672,8 +1669,7 @@ class EH_Rabi:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'power_rabi'
@@ -2013,7 +2009,7 @@ class EH_Rabi:
 					align()
 					square_TLS_swap[0].run()
 					align()
-					readout_avg_macro(machine.resonators[res_index].name,I,Q)
+					readout_rotated_macro(machine.resonators[res_index].name,I,Q)
 					align()
 					save(I, I_st)
 					save(Q, Q_st)
@@ -2072,8 +2068,7 @@ class EH_Rabi:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I**2 + Q**2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'freq'
@@ -2219,8 +2214,7 @@ class EH_Rabi:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I**2 + Q**2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'TLS_time_rabi'
@@ -2307,7 +2301,7 @@ class EH_Rabi:
 					align()
 					square_TLS_swap[0].run()
 					align()
-					readout_avg_macro(machine.resonators[res_index].name, I, Q)
+					readout_rotated_macro(machine.resonators[res_index].name, I, Q)
 					align()
 					save(I, I_st)
 					save(Q, Q_st)
@@ -2364,8 +2358,7 @@ class EH_Rabi:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'TLS_power_rabi'
@@ -2502,8 +2495,7 @@ class EH_Rabi:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I**2 + Q**2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'ef_freq'
@@ -2641,8 +2633,7 @@ class EH_Rabi:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'ef_time_rabi'
@@ -2779,8 +2770,7 @@ class EH_Rabi:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'ef_power_rabi'
@@ -2916,8 +2906,7 @@ class EH_Rabi:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'time_rabi_ef_thermal'
@@ -3438,8 +3427,7 @@ class EH_SWAP:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'time_rabi'
@@ -3693,8 +3681,7 @@ class EH_SWAP:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'time_rabi'
@@ -3834,8 +3821,7 @@ class EH_SWAP:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'time_rabi'
@@ -3960,8 +3946,7 @@ class EH_Ramsey:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'ramsey'
@@ -4109,8 +4094,7 @@ class EH_Ramsey:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'ramsey'
@@ -4266,8 +4250,7 @@ class EH_DD:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = 'echo'
@@ -4422,8 +4405,7 @@ class EH_DD:
 			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
 			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
 			sig_amp = np.sqrt(I ** 2 + Q ** 2)
-			# detrend removes the linear increase of phase
-			sig_phase = signal.detrend(np.unwrap(np.angle(I + 1j * Q)))
+			sig_phase = np.angle(I + 1j * Q)
 
 			# save data
 			exp_name = f"CPMG{N_CPMG}"
