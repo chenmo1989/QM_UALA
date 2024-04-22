@@ -240,7 +240,6 @@ class EH_1D:
 		sig_amp = np.sqrt(I ** 2 + Q ** 2)
 		idx = np.argmin(sig_amp)  # find minimum
 		return res_freq_sweep[idx]
-
 class EH_RR:
 	"""
 	class in ExperimentHandle, for Readout Resonator (RR) related 2D experiments
@@ -1533,6 +1532,250 @@ class EH_SWAP:
 
 		return machine, ff_sweep_abs, tau_sweep_abs, sig_amp.T
 
+class EH_time:
+	"""
+	class in ExperimentHandle, for timestamp experiments
+	Methods:
+		update_tPath
+		update_str_datetime
+	"""
+	def __init__(self, ref_to_update_tPath, ref_to_update_str_datetime):
+		self.update_tPath = ref_to_update_tPath
+		self.update_str_datetime = ref_to_update_str_datetime
+
+	def TLS_freq_subroutine(self, TLS_freq_sweep, qubit_index, res_index, flux_index, TLS_index = 0, pi_amp_rel = 1.0, n_avg = 1E3, cd_time_qubit = 10E3, cd_time_TLS = None, simulate_flag = False, simulation_len = 1000, fig = None, machine = None):
+		"""
+		TLS spectroscopy experiment in 1D
+		To be used as a subroutine for the 2D TLS_freq_time
+		Experimental sequence:
+		a strong MW pulse - SWAP - readout
+
+		uses the iswap defined in machine.flux_lines[flux_index].iswap.length/level[TLS_index]
+		the TLS driving pulse is a square wave, with duration = machine.qubits[qubit_index].pi_length_tls[TLS_index],
+		 amplitude = machine.qubits[qubit_index].pi_amp_tls[TLS_index]
+
+		Args:
+			TLS_freq_sweep ():
+			qubit_index ():
+			res_index ():
+			flux_index ():
+			TLS_index ():
+			pi_amp_rel ():
+			n_avg ():
+			cd_time_qubit ():
+			cd_time_TLS ():
+			machine ():
+			simulate_flag ():
+			simulation_len ():
+			plot_flag ():
+
+
+		Returns:
+			machine
+			TLS_freq_sweep
+			sig_amp
+			sig_phase
+		"""
+		calibrate_octave = False # flat for calibrating octave. So that I can move this to the real run, avoiding it for simulation
+
+		if machine is None:
+			machine = QuAM("quam_state.json")
+
+		config = build_config(machine)
+
+		qubit_lo = machine.qubits[qubit_index].lo
+		TLS_if_sweep = TLS_freq_sweep - qubit_lo
+		TLS_if_sweep = np.round(TLS_if_sweep)
+
+		# fLux pulse baking for SWAP
+		swap_length = machine.flux_lines[flux_index].iswap.length[TLS_index]
+		swap_amp = machine.flux_lines[flux_index].iswap.level[TLS_index]
+		flux_waveform = np.array([swap_amp] * swap_length)
+		def baked_swap_waveform(waveform):
+			pulse_segments = []  # Stores the baking objects
+			# Create the different baked sequences, each one corresponding to a different truncated duration
+			with baking(config, padding_method="right") as b:
+				b.add_op("flux_pulse", machine.flux_lines[flux_index].name, waveform.tolist())
+				b.play("flux_pulse", machine.flux_lines[flux_index].name)
+				pulse_segments.append(b)
+			return pulse_segments
+
+		square_TLS_swap = baked_swap_waveform(flux_waveform)
+
+		if np.max(abs(TLS_if_sweep)) > 350E6: # check if parameters are within hardware limit
+			print("TLS if range > 350MHz, changing LO...")
+			qubit_lo = np.mean(TLS_freq_sweep) - 200E6
+			qubit_lo = int(qubit_lo.tolist())
+			machine.qubits[qubit_index].f_01 = qubit_lo + 200E6
+			machine.qubits[qubit_index].lo = qubit_lo + 0E6
+			calibrate_octave = True
+			# reassign values
+			TLS_if_sweep = TLS_freq_sweep - qubit_lo
+			TLS_if_sweep = np.round(TLS_if_sweep)
+			if np.max(abs(TLS_if_sweep)) > 350E6:  # check if parameters are within hardware limit
+				print("TLS freq sweep range too large, abort...")
+				return None
+
+		with program() as TLS_freq_prog:
+			[I,Q,n,I_st,Q_st,n_st] = declare_vars()
+			df = declare(int)
+
+			with for_(n, 0, n < n_avg, n+1):
+				with for_(*from_array(df,TLS_if_sweep)):
+					update_frequency(machine.qubits[qubit_index].name, df)
+					if pi_amp_rel==1.0:
+						play('pi_tls', machine.qubits[qubit_index].name)
+					else:
+						play('pi_tls' * amp(pi_amp_rel), machine.qubits[qubit_index].name)
+					align()
+					square_TLS_swap[0].run()
+					align()
+					readout_rotated_macro(machine.resonators[res_index].name,I,Q)
+					align()
+					save(I, I_st)
+					save(Q, Q_st)
+					# eliminate charge accumulation, also initialize TLS
+					wait(cd_time_qubit * u.ns, machine.resonators[res_index].name)
+					align()
+					square_TLS_swap[0].run(amp_array=[(machine.flux_lines[flux_index].name, -1)])
+					wait(cd_time_TLS * u.ns, machine.resonators[res_index].name)
+				save(n, n_st)
+			with stream_processing():
+				n_st.save('iteration')
+				I_st.buffer(len(TLS_if_sweep)).average().save("I")
+				Q_st.buffer(len(TLS_if_sweep)).average().save("Q")
+
+		#####################################
+		#  Open Communication with the QOP  #
+		#####################################
+		qmm = QuantumMachinesManager(machine.network.qop_ip, port = '9510', octave=octave_config, log_level = "ERROR")
+		# Simulate or execute #
+		if simulate_flag: # simulation is useful to see the sequence, especially the timing (clock cycle vs ns)
+			simulation_config = SimulationConfig(duration=simulation_len)
+			job = qmm.simulate(config, TLS_freq_prog, simulation_config)
+			job.get_simulated_samples().con1.plot()
+		else:
+			if calibrate_octave:
+				self.octave_calibration(qubit_index, res_index, flux_index, machine=machine)
+
+			qm = qmm.open_qm(config)
+			job = qm.execute(TLS_freq_prog)
+			# Get results from QUA program
+			results = fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+			# Live plotting
+		    #%matplotlib qt
+			if fig is not None:
+				interrupt_on_close(fig, job)  # Interrupts the job when closing the figure
+
+			while results.is_processing():
+				# Fetch results
+				I, Q, iteration = results.fetch_all()
+				I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+				Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+
+			# fetch all data after live-updating
+			I, Q, iteration = results.fetch_all()
+			# Convert I & Q to Volts
+			I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+			Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+
+			return machine, TLS_freq_sweep, I, Q
+
+	def TLS_freq_time(self, TLS_freq_sweep, qubit_index, res_index, flux_index, TLS_index = 0, N_rounds = 1, pi_amp_rel = 1.0, n_avg = 1E3, cd_time_qubit = 10E3, cd_time_TLS = None, tPath=None, f_str_datetime=None, simulate_flag=False, simulation_len=1000, plot_flag=True, machine = None):
+		"""
+		TLS frequency spectroscopy as a function of time to show jumps
+		Based on the subroutine given in EH_1D.TLS_freq_subroutine
+		Adds a timestamp to plot results from spectroscopy as a fucntion of time elapsed
+
+		Args:
+		TLS_freq_sweep ():
+		N_rounds (): number of 1D spectroscopy
+		qubit_index ():
+		res_index ():
+		flux_index ():
+		TLS_index ():
+		pi_amp_rel ():
+		n_avg ():
+		cd_time_qubit ():
+		cd_time_TLS ():
+		machine ():
+		simulate_flag ():
+		simulation_len ():
+		plot_flag ():
+		tPath: target path/folder for saving the data. Default is today.
+		f_str_datetime: datetime string for saving the data. Default is now.
+		simulate_flag: True-run simulation; False (default)-run experiment.
+		simulation_len: Length of the sequence to simulate. In clock cycles (4ns).
+		:plot_flag: True (default) plot the experiment. False, do not plot.
+		machine: None (default), will read from quam_state.json
+
+		Return:
+			machine
+			TLS_freq_sweep
+			tau
+			amplitude
+			phase
+		"""
+		if tPath is None:
+			tPath = self.update_tPath()
+		if f_str_datetime is None:
+			f_str_datetime = self.update_str_datetime()
+
+		# Initialize empty vectors to store the global 'I', 'Q', and 'timestamp' results
+		I_TLS_tot = []
+		Q_TLS_tot = []
+		timestamp = []
+
+		start_time = time.time()
+		timestamp.append(0)
+		t = datetime.datetime.now()
+
+		for N_index in np.arange(N_rounds):
+			progress_counter(N_index, N_rounds, start_time=start_time)
+
+			if plot_flag == True:
+				machine, f_sweep, I_tmp, Q_tmp = self.TLS_freq_subroutine(TLS_freq_sweep, qubit_index, res_index, flux_index,
+																				TLS_index, pi_amp_rel, n_avg, cd_time_qubit,
+																				cd_time_TLS, simulate_flag,
+																				simulation_len, machine = None)
+
+			else:
+				machine, f_sweep, I_tmp, Q_tmp = self.TLS_freq_subroutine(TLS_freq_sweep, qubit_index, res_index, flux_index,
+																				TLS_index, pi_amp_rel, n_avg, cd_time_qubit,
+																				cd_time_TLS, simulate_flag,
+																				simulation_len, machine = None)
+
+			elapsed = datetime.datetime.now() - t
+			timestamp.append(elapsed.total_seconds())
+			I_TLS_tot.append(I_tmp)
+			Q_TLS_tot.append(Q_tmp)
+
+		# save
+		I_tls = np.concatenate([I_TLS_tot])
+		Q_tls = np.concatenate([Q_TLS_tot])
+		tau = np.concatenate([timestamp])
+		sig_amp_tls =  np.sqrt(I_tls ** 2 + Q_tls ** 2)  # Amplitude
+		sig_phase_tls =np.angle(I_tls + 1j * Q_tls)
+		# save data
+		exp_name = f"TLS_freq_rounds_{N_rounds}"
+		qubit_name = 'Q' + str(qubit_index + 1) + 'TLS' + str(TLS_index + 1)
+		f_str = qubit_name + '-' + exp_name + '-' + f_str_datetime
+		file_name = f_str + '.mat'
+		json_name = f_str + '_state.json'
+		savemat(os.path.join(tPath, file_name),
+				{"TLS_freq_sweep": TLS_freq_sweep, "time": tau, "sig_amp": sig_amp_tls, "sig_phase": sig_phase_tls})
+		machine._save(os.path.join(tPath, json_name), flat_data=False)
+
+		# plot
+		plt.pcolormesh((tau[:-1] + tau[1:]) / 2, (TLS_freq_sweep.T) / u.MHz, sig_amp_tls.T, shading='nearest', cmap='seismic')
+		plt.title("Jumps")
+		plt.xlabel("Time [s]")
+		plt.ylabel("Frequency [MHz]")
+		plt.xlim([0,np.max(tau)])
+		plt.colorbar()
+
+		return machine, TLS_freq_sweep, tau, sig_amp_tls, sig_phase_tls
+
 
 class EH_exp2D:
 	"""
@@ -1552,4 +1795,5 @@ class EH_exp2D:
 		self.exp1D = EH_1D()
 		self.Rabi = EH_Rabi(ref_to_update_tPath,ref_to_update_str_datetime,self.exp1D,self.octave_calibration)
 		self.SWAP = EH_SWAP(ref_to_update_tPath,ref_to_update_str_datetime)
+		self.time = EH_time(ref_to_update_tPath,ref_to_update_str_datetime)
 		#self.CPMG = EH_CPMG(ref_to_update_tPath,ref_to_update_str_datetime)
