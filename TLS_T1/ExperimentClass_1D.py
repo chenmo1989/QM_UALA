@@ -3151,6 +3151,13 @@ class EH_T1:
 					plt.ylabel(r"$I$ [V]")
 					plt.pause(0.01)
 
+		# fetch all data after live-updating
+		I, Q, iteration = results.fetch_all()
+		# Convert I & Q to Volts
+		I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+		Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+		sig_amp = np.sqrt(I ** 2 + Q ** 2)
+		sig_phase = np.angle(I + 1j * Q)
 		# save data
 		exp_name = 'T1'
 		qubit_name = 'Q' + str(qubit_index + 1) + "_TLS" + str(TLS_index + 1)
@@ -3161,7 +3168,7 @@ class EH_T1:
 				{"TLS_tau": tau_sweep_abs, "sig_amp": sig_amp, "sig_phase": sig_phase})
 		machine._save(os.path.join(tPath, json_name), flat_data=False)
 
-		return machine, tau_sweep_abs, I
+		return machine, tau_sweep_abs, sig_amp
 
 	def TLS_T1_driving(self, tau_sweep_abs, qubit_index, res_index, flux_index, TLS_index=0, n_avg = 1E3, cd_time_qubit = 10E3, cd_time_TLS = None, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
 		"""
@@ -3279,6 +3286,13 @@ class EH_T1:
 					plt.ylabel(r"$I$ [V]")
 					plt.pause(0.01)
 
+		# fetch all data after live-updating
+		I, Q, iteration = results.fetch_all()
+		# Convert I & Q to Volts
+		I = u.demod2volts(I, machine.resonators[res_index].readout_pulse_length)
+		Q = u.demod2volts(Q, machine.resonators[res_index].readout_pulse_length)
+		sig_amp = np.sqrt(I ** 2 + Q ** 2)
+		sig_phase = np.angle(I + 1j * Q)
 		# save data
 		exp_name = 'T1_driving'
 		qubit_name = 'Q' + str(qubit_index + 1) + "_TLS" + str(TLS_index + 1)
@@ -3289,7 +3303,7 @@ class EH_T1:
 				{"TLS_tau": tau_sweep_abs, "sig_amp": sig_amp, "sig_phase": sig_phase})
 		machine._save(os.path.join(tPath, json_name), flat_data=False)
 
-		return machine, tau_sweep_abs, I
+		return machine, tau_sweep_abs, sig_amp
 
 class EH_SWAP:
 	"""
