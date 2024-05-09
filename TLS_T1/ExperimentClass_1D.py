@@ -4096,11 +4096,11 @@ class EH_Ramsey:
 				if plot_flag == True:
 					plt.cla()
 					plt.title("Ramsey with detuning = %i MHz" % (detuning/1E6))
-					plt.plot(ramsey_duration_sweep * 4, sig_amp, "b.")
+					plt.plot(ramsey_duration_sweep * 4, I, "b.")
 					# plt.plot(ramsey_duration_sweep * 4, I, "b.")
 					plt.xlabel("tau [ns]")
-					plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
-					# plt.ylabel(r"$I$ [V]")
+					# plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
+					plt.ylabel(r"$I$ [V]")
 					plt.pause(0.01)
 
 			# fetch all data after live-updating
@@ -4121,7 +4121,7 @@ class EH_Ramsey:
 					{"TLS_ramsey_duration": ramsey_duration_sweep * 4, "sig_amp": sig_amp, "sig_phase": sig_phase})
 			machine._save(os.path.join(tPath, json_name), flat_data=False)
 
-			return machine, ramsey_duration_sweep * 4, sig_amp
+			return machine, ramsey_duration_sweep * 4, I
 
 class EH_DD:
 	def __init__(self, ref_to_update_tPath, ref_to_update_str_datetime):
@@ -4279,7 +4279,7 @@ class EH_DD:
 
 			return machine, tau_sweep * 4, I
 
-	def TLS_CPMG(self, tau_sweep, qubit_index, res_index, flux_index, TLS_index = 0, if_x_pi2 = False, N_CPMG = 8, n_avg = 1E3, minus_pulse = False, cd_time_qubit = 20E3, cd_time_TLS = None, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
+	def TLS_CPMG(self, tau_sweep, qubit_index, res_index, flux_index, TLS_index = 0, if_x_pi2 = False, N_CPMG = 8, n_avg = 1E3, minus_pulse = False, cd_time_qubit = 20E3, cd_time_TLS = None, N_SWAP_CD = 0, tPath = None, f_str_datetime = None, simulate_flag = False, simulation_len = 1000, plot_flag = True, machine = None):
 		"""
 		TLS CPMG8 in 1D.
 		pi/2_y - (tau - pi_x - 2tau - pi_x - tau)^4 - pi/2_y
@@ -4295,6 +4295,7 @@ class EH_DD:
 		:param minus_pulse: if True, the alternating pi pulses in CPMG will have opposite sign to reduce amplitude errors due to poor resolution when calibration [pi pulse for TLS
 		:param cd_time_qubit:
 		:param cd_time_TLS:
+		:param N_SWAP_CD: number of swaps with qubit to make the thermalization faster
 		:param tPath:
 		:param f_str_datetime:
 		:param simulate_flag:
@@ -4384,8 +4385,21 @@ class EH_DD:
 					align()
 					wait(cd_time_qubit * u.ns, machine.resonators[qubit_index].name)
 					align()
+					for i in range(N_SWAP_CD):
+						# swap back and forth with the qubit 3 times so that it runs faster
+						square_TLS_swap[0].run()
+						align()
+						wait(cd_time_qubit * u.ns, machine.resonators[qubit_index].name)
+						align()
 					square_TLS_swap[0].run(amp_array=[(machine.flux_lines[flux_index].name, -1)])
-					wait(cd_time_TLS * u.ns, machine.resonators[qubit_index].name)
+					wait(cd_time_qubit * u.ns, machine.resonators[qubit_index].name)
+					align()
+					for i in range(N_SWAP_CD):
+						square_TLS_swap[0].run(amp_array=[(machine.flux_lines[flux_index].name, -1)])
+						wait(cd_time_qubit * u.ns, machine.resonators[qubit_index].name)
+						align()
+					if N_SWAP_CD == 0:
+						wait(cd_time_TLS * u.ns, machine.resonators[qubit_index].name)
 					reset_frame(machine.qubits[qubit_index].name) # to avoid phase accumulation
 				save(n, n_st)
 
@@ -4425,7 +4439,7 @@ class EH_DD:
 					plt.cla()
 					plt.title(f"TLS CPMG{N_CPMG}")
 					#plt.plot(tau_sweep * 4, sig_amp, "b.")
-					plt.plot(tau_sweep * 4, sig_amp, "b.")
+					plt.plot(tau_sweep * 4, I, "b.")
 					plt.xlabel("tau (half pulse spacing) [ns]")
 					#plt.ylabel(r"$\sqrt{I^2 + Q^2}$ [V]")
 					plt.ylabel(r"$I$ [V]")
@@ -4449,7 +4463,7 @@ class EH_DD:
 					{"TLS_CPMG_tau": tau_sweep * 4, "sig_amp": sig_amp, "sig_phase": sig_phase})
 			machine._save(os.path.join(tPath, json_name), flat_data=False)
 
-			return machine, tau_sweep * 4, sig_amp
+			return machine, tau_sweep * 4, I
 
 	def TLS_CPMG_subroutine(self, tau_val, N_CPMG, qubit_index, res_index, flux_index, TLS_index = 0, if_x_pi2 = False, n_avg = 1E3, cd_time_qubit = 20E3, cd_time_TLS = None, simulate_flag = False, simulation_len = 1000, machine = None):
 		"""
